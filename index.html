@@ -1264,21 +1264,26 @@
 
         // 更新数字按钮唯余法提示
         function updateNumberPadHighlight() {
-            const uniqueNum = findUniqueNumberForLine();
-            const numBtns = document.querySelectorAll('.num-btn[data-num]');
-            
-            numBtns.forEach(btn => {
-                const num = parseInt(btn.dataset.num);
-                btn.classList.remove('dimmed', 'unique-number');
+            try {
+                const uniqueNum = findUniqueNumberForLine();
+                const numBtns = document.querySelectorAll('.num-btn[data-num]');
                 
-                if (uniqueNum !== null) {
-                    if (num !== uniqueNum) {
-                        btn.classList.add('dimmed');
-                    } else {
-                        btn.classList.add('unique-number');
+                numBtns.forEach(btn => {
+                    const num = parseInt(btn.dataset.num);
+                    btn.classList.remove('dimmed', 'unique-number');
+                    btn.style.pointerEvents = ''; // 重置点击事件
+                    
+                    if (uniqueNum !== null) {
+                        if (num !== uniqueNum) {
+                            btn.classList.add('dimmed');
+                        } else {
+                            btn.classList.add('unique-number');
+                        }
                     }
-                }
-            });
+                });
+            } catch (e) {
+                console.error('updateNumberPadHighlight error:', e);
+            }
         }
 
         // 高亮单元格
@@ -1398,6 +1403,7 @@
             renderGrid();
             updateRemaining();
             updateNumberRemaining();
+            updateNumberPadHighlight(); // 确保数字按钮状态更新
             
             if (isComplete()) {
                 clearInterval(timerInterval);
