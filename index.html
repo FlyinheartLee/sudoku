@@ -101,34 +101,35 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 20px;
-            padding-top: max(12px, env(safe-area-inset-top));
+            padding: 8px 16px;
+            padding-top: max(8px, env(safe-area-inset-top));
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(99, 102, 241, 0.2);
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .logo-icon {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1rem;
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
         .logo-text {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 800;
             background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             -webkit-background-clip: text;
@@ -137,11 +138,11 @@
         }
 
         .difficulty-badge {
-            padding: 6px 14px;
+            padding: 4px 10px;
             background: rgba(255, 255, 255, 0.95);
             border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 20px;
-            font-size: 0.75rem;
+            border-radius: 16px;
+            font-size: 0.7rem;
             font-weight: 700;
             color: #4f46e5;
             text-transform: uppercase;
@@ -149,26 +150,27 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        /* 统计栏 */
+        /* 统计栏 - 压缩版本 */
         .stats-bar {
             position: relative;
             z-index: 10;
             display: flex;
-            justify-content: space-around;
-            padding: 12px 20px;
-            gap: 12px;
+            justify-content: center;
+            gap: 16px;
+            padding: 6px 16px;
+            flex-shrink: 0;
         }
 
         .stat-card {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
-            padding: 12px 16px;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
         }
 
         .stat-card:active {
@@ -179,16 +181,14 @@
             font-size: 0.65rem;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
-            font-size: 1.4rem;
-            font-weight: 800;
+            font-size: 1rem;
+            font-weight: 700;
             color: var(--text-primary);
             font-variant-numeric: tabular-nums;
-            text-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
         }
 
         .stat-value.time {
@@ -206,7 +206,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 10px 20px;
+            padding: 6px 16px;
             min-height: 0;
             position: relative;
             z-index: 10;
@@ -214,12 +214,12 @@
 
         .grid-container {
             background: rgba(255, 255, 255, 0.95);
-            padding: 12px;
-            border-radius: 20px;
+            padding: 10px;
+            border-radius: 16px;
             border: 2px solid rgba(255, 255, 255, 0.5);
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 60px rgba(99, 102, 241, 0.3);
             width: 100%;
-            max-width: min(95vw, 420px);
+            max-width: min(92vw, 380px);
             aspect-ratio: 1;
             position: relative;
         }
@@ -232,7 +232,7 @@
             right: -2px;
             bottom: -2px;
             background: linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #818cf8 100%);
-            border-radius: 22px;
+            border-radius: 18px;
             z-index: -1;
             opacity: 0.8;
         }
@@ -254,8 +254,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: clamp(1.2rem, 5vw, 1.8rem);
-            font-weight: 700;
+            font-size: clamp(1.4rem, 6vw, 2.2rem);
+            font-weight: 800;
             cursor: pointer;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
@@ -291,13 +291,13 @@
 
         .cell.fixed {
             color: #1e293b;
-            font-weight: 800;
+            font-weight: 900;
             background: #e2e8f0;
         }
 
         .cell.user-input {
             color: #4f46e5;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .cell.error {
@@ -343,7 +343,7 @@
             grid-template-rows: repeat(3, 1fr);
             width: 100%;
             height: 100%;
-            font-size: clamp(0.4rem, 1.8vw, 0.6rem);
+            font-size: clamp(0.4rem, 1.8vw, 0.55rem);
             gap: 1px;
             padding: 2px;
         }
@@ -369,20 +369,20 @@
             z-index: 10;
             display: flex;
             justify-content: center;
-            gap: 8px;
-            padding: 10px 16px;
-            flex-wrap: wrap;
+            gap: 6px;
+            padding: 6px 12px;
+            flex-shrink: 0;
         }
 
         .tool-btn {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 10px 16px;
-            font-size: 0.8rem;
+            gap: 4px;
+            padding: 6px 10px;
+            font-size: 0.75rem;
             font-weight: 600;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(10px);
@@ -395,11 +395,11 @@
         .tool-btn-new {
             background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             color: white;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
         }
 
         .tool-btn-new:active {
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
         }
 
         .tool-btn-secondary {
@@ -418,30 +418,37 @@
             border-color: #10b981;
         }
 
-        /* 数字键盘 */
+        /* 数字键盘 - 两排布局 */
         .number-pad {
             position: relative;
             z-index: 10;
             display: flex;
-            justify-content: center;
-            gap: 8px;
-            padding: 16px 12px;
-            padding-bottom: max(16px, env(safe-area-inset-bottom));
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 12px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
             background: rgba(255, 255, 255, 0.95);
             border-top: 2px solid rgba(99, 102, 241, 0.3);
+            flex-shrink: 0;
+        }
+
+        .number-pad-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
         }
 
         .num-btn {
             flex: 1;
-            max-width: 64px;
-            min-width: 48px;
-            height: 64px;
-            font-size: 1.8rem;
+            max-width: 56px;
+            min-width: 40px;
+            height: 52px;
+            font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
             color: #4f46e5;
             border: 2px solid #c7d2fe;
-            border-radius: 16px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
@@ -449,7 +456,7 @@
             justify-content: center;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
         }
 
         .num-btn::before {
@@ -480,14 +487,14 @@
             background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
             color: #059669;
             border-color: #34d399;
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
         }
 
         .num-btn.erase {
             background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
             color: #dc2626;
             border-color: #fca5a5;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
         }
 
         .num-btn.erase:active {
@@ -707,45 +714,59 @@
         /* 横屏优化 */
         @media (orientation: landscape) and (max-height: 500px) {
             .header {
-                padding: 8px 16px;
+                padding: 6px 12px;
             }
             
             .logo-text {
-                font-size: 1.1rem;
+                font-size: 1rem;
             }
             
             .stats-bar {
-                padding: 8px 12px;
+                padding: 4px 10px;
+                gap: 12px;
             }
             
             .stat-card {
-                padding: 8px 12px;
+                padding: 3px 10px;
+            }
+
+            .stat-value {
+                font-size: 0.9rem;
             }
             
             .toolbar {
-                padding: 6px;
+                padding: 4px 8px;
+            }
+
+            .tool-btn {
+                padding: 5px 8px;
+                font-size: 0.7rem;
             }
             
             .number-pad {
-                padding: 10px 12px;
-                gap: 6px;
+                padding: 6px 10px;
+                gap: 4px;
+            }
+
+            .number-pad-row {
+                gap: 4px;
             }
             
             .num-btn {
-                height: 48px;
-                max-width: 52px;
-                font-size: 1.4rem;
-                border-radius: 12px;
+                height: 40px;
+                max-width: 48px;
+                font-size: 1.3rem;
+                border-radius: 10px;
             }
         }
 
         /* 添加菜单按钮 */
         .menu-btn {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             background: rgba(99, 102, 241, 0.1);
             border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -755,7 +776,7 @@
         }
 
         .menu-btn span {
-            width: 18px;
+            width: 16px;
             height: 2px;
             background: #4f46e5;
             border-radius: 1px;
@@ -772,7 +793,7 @@
             <div class="logo-icon">🧩</div>
             <div class="logo-text">数独 Master</div>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center;">
             <span class="difficulty-badge" id="difficulty-badge">简单</span>
             <div class="menu-btn" onclick="showNewGameModal()">
                 <span></span>
@@ -782,15 +803,15 @@
         </div>
     </div>
 
-    <!-- 统计栏 -->
+    <!-- 统计栏 - 压缩版本 -->
     <div class="stats-bar">
         <div class="stat-card">
-            <div class="stat-label">⏱️ 时间</div>
-            <div class="stat-value time" id="timer">00:00</div>
+            <span class="stat-label">⏱️</span>
+            <span class="stat-value time" id="timer">00:00</span>
         </div>
         <div class="stat-card">
-            <div class="stat-label">🔢 剩余</div>
-            <div class="stat-value remaining" id="remaining">81</div>
+            <span class="stat-label">🔢</span>
+            <span class="stat-value remaining" id="remaining">81</span>
         </div>
     </div>
 
@@ -817,18 +838,22 @@
         </button>
     </div>
 
-    <!-- 数字键盘 -->
+    <!-- 数字键盘 - 两排布局 -->
     <div class="number-pad">
-        <button class="num-btn" data-num="1" onclick="inputNumber(1)">1</button>
-        <button class="num-btn" data-num="2" onclick="inputNumber(2)">2</button>
-        <button class="num-btn" data-num="3" onclick="inputNumber(3)">3</button>
-        <button class="num-btn" data-num="4" onclick="inputNumber(4)">4</button>
-        <button class="num-btn" data-num="5" onclick="inputNumber(5)">5</button>
-        <button class="num-btn" data-num="6" onclick="inputNumber(6)">6</button>
-        <button class="num-btn" data-num="7" onclick="inputNumber(7)">7</button>
-        <button class="num-btn" data-num="8" onclick="inputNumber(8)">8</button>
-        <button class="num-btn" data-num="9" onclick="inputNumber(9)">9</button>
-        <button class="num-btn erase" onclick="inputNumber(0)">⌫</button>
+        <div class="number-pad-row">
+            <button class="num-btn" data-num="1" onclick="inputNumber(1)">1</button>
+            <button class="num-btn" data-num="2" onclick="inputNumber(2)">2</button>
+            <button class="num-btn" data-num="3" onclick="inputNumber(3)">3</button>
+            <button class="num-btn" data-num="4" onclick="inputNumber(4)">4</button>
+            <button class="num-btn" data-num="5" onclick="inputNumber(5)">5</button>
+        </div>
+        <div class="number-pad-row">
+            <button class="num-btn" data-num="6" onclick="inputNumber(6)">6</button>
+            <button class="num-btn" data-num="7" onclick="inputNumber(7)">7</button>
+            <button class="num-btn" data-num="8" onclick="inputNumber(8)">8</button>
+            <button class="num-btn" data-num="9" onclick="inputNumber(9)">9</button>
+            <button class="num-btn erase" onclick="inputNumber(0)">⌫</button>
+        </div>
     </div>
 
     <!-- 难度选择弹窗 -->
