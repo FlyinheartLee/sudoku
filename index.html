@@ -317,8 +317,25 @@
         }
 
         .cell.same-number {
-            background: #d1fae5;
-            color: #059669;
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        /* 笔记模式下被选数不高亮 */
+        .cell.same-number.notes-active {
+            background: inherit;
+            color: inherit;
+        }
+
+        /* 唯一候选数高亮 - 只剩一个可填位置时的提示 */
+        .cell.unique-hint {
+            background: #fef3c7 !important;
+            animation: uniquePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes uniquePulse {
+            0%, 100% { background: #fef3c7; }
+            50% { background: #fde68a; }
         }
 
         .cell.notes-mode {
@@ -947,13 +964,13 @@
         let solution = [];
         let fixedCells = [];
         let selectedCell = null;
-        let difficulty = 'easy';
+        let difficulty = 'hard';
         let timerInterval;
         let seconds = 0;
         let notesMode = false;
         let notes = Array(81).fill().map(() => new Set());
         let history = [];
-        let selectedDifficulty = 'easy';
+        let selectedDifficulty = 'hard';
         let hintCell = null;
 
         // 初始化
@@ -1100,7 +1117,8 @@
                 case 'easy': cellsToRemove = 35; break;
                 case 'medium': cellsToRemove = 45; break;
                 case 'hard': cellsToRemove = 55; break;
-                default: cellsToRemove = 35;
+                case 'expert': cellsToRemove = 62; break;
+                default: cellsToRemove = 55;
             }
             
             const positions = Array.from({length: 81}, (_, i) => i);
@@ -1166,13 +1184,62 @@
             renderGrid();
         }
 
+        // 检查某行、列、宫中是否有唯一的空位
+        function findUniqueEmptyCell() {
+            // 检查行
+            for (let row = 0; row < 9; row++) {
+                const emptyCells = [];
+                for (let col = 0; col < 9; col++) {
+                    const idx = row * 9 + col;
+                    if (grid[idx] === 0) emptyCells.push(idx);
+                }
+                if (emptyCells.length === 1) return emptyCells[0];
+            }
+            
+            // 检查列
+            for (let col = 0; col < 9; col++) {
+                const emptyCells = [];
+                for (let row = 0; row < 9; row++) {
+                    const idx = row * 9 + col;
+                    if (grid[idx] === 0) emptyCells.push(idx);
+                }
+                if (emptyCells.length === 1) return emptyCells[0];
+            }
+            
+            // 检查宫
+            for (let boxRow = 0; boxRow < 3; boxRow++) {
+                for (let boxCol = 0; boxCol < 3; boxCol++) {
+                    const emptyCells = [];
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            const row = boxRow * 3 + i;
+                            const col = boxCol * 3 + j;
+                            const idx = row * 9 + col;
+                            if (grid[idx] === 0) emptyCells.push(idx);
+                        }
+                    }
+                    if (emptyCells.length === 1) return emptyCells[0];
+                }
+            }
+            
+            return null;
+        }
+
         // 高亮单元格
         function highlightCells() {
             const cells = document.querySelectorAll('.cell');
             
+            // 检查是否有唯一空位（唯余法）
+            const uniqueCell = findUniqueEmptyCell();
+            
             cells.forEach((cell, idx) => {
                 if (idx === selectedCell) {
                     cell.classList.add('selected');
+                }
+                
+                // 唯余法提示：只剩一个空位的行/列/宫
+                if (idx === uniqueCell) {
+                    cell.classList.add('unique-hint');
                 }
                 
                 if (selectedCell !== null) {
@@ -1193,7 +1260,8 @@
                         cell.classList.add('highlight');
                     }
                     
-                    if (grid[idx] !== 0 && grid[idx] === grid[selectedCell]) {
+                    // 被选数高亮（笔记模式下不高亮）
+                    if (grid[idx] !== 0 && grid[idx] === grid[selectedCell] && !notesMode) {
                         cell.classList.add('same-number');
                     }
                 }
@@ -1524,5 +1592,21 @@
         // 启动
         init();
     </script>
+</body>
+</html>
+d', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>
+>
 </body>
 </html>
