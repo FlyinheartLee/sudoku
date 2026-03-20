@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#10b981">
+    <title>摩天楼 -  visibility puzzle</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #a7f3d0;
+            --secondary: #06b6d4;
+            --accent: #f59e0b;
+            --bg-dark: #064e3b;
+            --bg-card: #065f46;
+            --text-primary: #ffffff;
+            --text-secondary: #d1fae5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #064e3b 0%, #059669 30%, #10b981 70%, #34d399 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, transparent 60%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 50%);
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, -20px); }
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #059669 0%, #0891b2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .level-badge {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .stats-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 10px 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .stat-label {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-wrapper {
+            display: grid;
+            grid-template-columns: 40px 1fr 40px;
+            grid-template-rows: 40px 1fr 40px;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 60px rgba(16, 185, 129, 0.3);
+        }
+
+        .game-grid {
+            display: grid;
+            gap: 3px;
+            background: #d1fae5;
+            padding: 4px;
+            border-radius: 12px;
+        }
+
+        .cell {
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            aspect-ratio: 1;
+            min-width: 45px;
+            min-height: 45px;
+            color: #065f46;
+        }
+
+        .cell:active {
+            transform: scale(0.92);
+        }
+
+        .cell.selected {
+            background: linear-gradient(145deg, #a7f3d0 0%, #6ee7b7 100%);
+            box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.3), 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .cell.same-number {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .cell.conflict {
+            background: #fee2e2 !important;
+            color: #dc2626 !important;
+        }
+
+        .hint-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #065f46;
+            background: rgba(16, 185, 129, 0.15);
+            border-radius: 8px;
+        }
+
+        .hint-number.satisfied {
+            background: rgba(16, 185, 129, 0.4);
+            color: #065f46;
+        }
+
+        .hint-number.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #dc2626;
+        }
+
+        .corner {
+            background: transparent;
+        }
+
+        .toolbar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
+        }
+
+        .tool-btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .tool-btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary-dark);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .number-pad {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 2px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .num-btn {
+            width: 48px;
+            height: 48px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
+            color: #065f46;
+            border: 2px solid #a7f3d0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+        }
+
+        .num-btn:active {
+            transform: scale(0.92);
+            background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+
+        .num-btn.erase {
+            background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
+            color: #dc2626;
+            border-color: #fca5a5;
+            font-size: 1.2rem;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
+            border: 2px solid rgba(16, 185, 129, 0.2);
+            border-radius: 24px;
+            padding: 28px;
+            width: 100%;
+            max-width: 340px;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal h2 {
+            color: #065f46;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .level-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .level-option {
+            padding: 16px 20px;
+            background: rgba(167, 243, 208, 0.5);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .level-option:hover {
+            background: rgba(16, 185, 129, 0.1);
+            transform: translateX(4px);
+        }
+
+        .level-option.selected {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-color: #10b981;
+        }
+
+        .level-option .label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #065f46;
+            display: block;
+        }
+
+        .level-option .desc {
+            font-size: 0.8rem;
+            color: #047857;
+            margin-top: 4px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(167, 243, 208, 0.5);
+            color: #065f46;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .rules-text {
+            font-size: 0.9rem;
+            color: #047857;
+            line-height: 1.6;
+            margin: 15px 0;
+        }
+
+        .rules-text strong {
+            color: #065f46;
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.98);
+            color: #065f46;
+            padding: 16px 28px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 2000;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .toast.error {
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+
+        .victory-modal {
+            text-align: center;
+        }
+
+        .victory-icon {
+            font-size: 5rem;
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .game-switcher {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            text-decoration: none;
+            box-shadow: 0 2px 10px rgba(139, 92, 246, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .game-switcher:active {
+            transform: scale(0.92);
+        }
+
+        .switcher-menu {
+            position: absolute;
+            top: 60px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 100;
+            min-width: 160px;
+        }
+
+        .switcher-menu.show {
+            display: block;
+        }
+
+        .switcher-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .switcher-item:hover {
+            background: #f3f4f6;
+        }
+
+        .switcher-item.active {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-decoration"></div>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🏢</div>
+            <div class="logo-text">摩天楼</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="game-switcher" onclick="toggleSwitcher()" title="切换游戏">🎮</div>
+            <div class="level-badge" id="level-badge">4×4</div>
+        </div>
+    </div>
+
+    <div class="switcher-menu" id="switcher-menu">
+        <a href="index.html" class="switcher-item">
+            <span>🧩</span> 数独 Master
+        </a>
+        <a href="number-maze.html" class="switcher-item">
+            <span>🔢</span> 数字迷宫
+        </a>
+        <a href="skyscraper.html" class="switcher-item active">
+            <span>🏢</span> 摩天楼
+        </a>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">已填</span>
+            <span class="stat-value" id="filled-count">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">剩余</span>
+            <span class="stat-value" id="remaining-count">16</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">难度</span>
+            <span class="stat-value" id="difficulty-text">简单</span>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="grid-wrapper">
+            <div class="corner"></div>
+            <div id="top-hints"></div>
+            <div class="corner"></div>
+            <div id="left-hints"></div>
+            <div class="game-grid" id="grid"></div>
+            <div id="right-hints"></div>
+            <div class="corner"></div>
+            <div id="bottom-hints"></div>
+            <div class="corner"></div>
+        </div>
+    </div>
+
+    <div class="number-pad" id="number-pad">
+        <!-- 动态生成 -->
+    </div>
+
+    <div class="toolbar">
+        <button class="tool-btn tool-btn-secondary" onclick="undo()">
+            <span>↩️</span> 撤销
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="showRules()">
+            <span>📖</span> 规则
+        </button>
+        <button class="tool-btn tool-btn-primary" onclick="showLevelModal()">
+            <span>🎮</span> 新游戏
+        </button>
+    </div>
+
+    <!-- 难度选择 -->
+    <div class="modal-overlay" id="level-modal">
+        <div class="modal">
+            <h2>选择难度</h2>
+            <div class="level-options">
+                <div class="level-option" data-level="4" onclick="selectLevel(4)">
+                    <span class="label">🌱 4×4 简单</span>
+                    <span class="desc">数字1-4，入门练手</span>
+                </div>
+                <div class="level-option selected" data-level="5" onclick="selectLevel(5)">
+                    <span class="label">🌿 5×5 进阶</span>
+                    <span class="desc">数字1-5，小有挑战</span>
+                </div>
+                <div class="level-option" data-level="6" onclick="selectLevel(6)">
+                    <span class="label">🌳 6×6 困难</span>
+                    <span class="desc">数字1-6，需要动脑</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeLevelModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="startGame()">开始游戏</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则说明 -->
+    <div class="modal-overlay" id="rules-modal">
+        <div class="modal">
+            <h2>📖 游戏规则</h2>
+            <div class="rules-text">
+                <p><strong>目标：</strong>填满整个格子</p>
+                <p><strong>规则1：</strong>每行每列填入1-N的数字，不能重复</p>
+                <p><strong>规则2（关键）：</strong>边缘数字表示从该方向能看到的"摩天楼"数量</p>
+                <p><strong> visibility：</strong>高的建筑会挡住矮的建筑</p>
+                <p style="margin-top: 10px;"><strong>示例：</strong>边缘标"3"表示能看到3栋楼（数字递增趋势）</p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="closeRulesModal()">明白了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal victory-modal">
+            <div class="victory-icon">🎉</div>
+            <h2>恭喜通关！</h2>
+            <p style="color: #047857; margin: 10px 0;">你完成了 <span id="victory-size">5×5</span> 摩天楼！</p>
+            <div class="modal-actions" style="margin-top: 24px;">
+                <button class="modal-btn modal-btn-primary" onclick="nextLevel()">下一关</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let gridSize = 5;
+        let grid = [];
+        let solution = [];
+        let topHints = [];
+        let bottomHints = [];
+        let leftHints = [];
+        let rightHints = [];
+        let selectedCell = null;
+        let selectedLevel = 5;
+        let history = [];
+
+        function init() {
+            createGrid();
+            generatePuzzle();
+            renderGrid();
+            renderHints();
+            createNumberPad();
+            updateStats();
+        }
+
+        function createGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => onCellClick(i));
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function createNumberPad() {
+            const padEl = document.getElementById('number-pad');
+            padEl.innerHTML = '';
+            
+            for (let i = 1; i <= gridSize; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'num-btn';
+                btn.textContent = i;
+                btn.onclick = () => inputNumber(i);
+                padEl.appendChild(btn);
+            }
+            
+            const eraseBtn = document.createElement('button');
+            eraseBtn.className = 'num-btn erase';
+            eraseBtn.textContent = '⌫';
+            eraseBtn.onclick = () => inputNumber(0);
+            padEl.appendChild(eraseBtn);
+        }
+
+        // 计算从某个方向能看到的建筑数量
+        function calculateVisibility(line) {
+            let count = 0;
+            let maxHeight = 0;
+            for (let height of line) {
+                if (height > maxHeight) {
+                    count++;
+                    maxHeight = height;
+                }
+            }
+            return count;
+        }
+
+        // 生成完整解答
+        function generateSolution() {
+            const board = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            
+            function isValid(board, row, col, num) {
+                for (let x = 0; x < gridSize; x++) {
+                    if (board[row][x] === num) return false;
+                }
+                for (let x = 0; x < gridSize; x++) {
+                    if (board[x][col] === num) return false;
+                }
+                return true;
+            }
+            
+            function solve(board) {
+                for (let row = 0; row < gridSize; row++) {
+                    for (let col = 0; col < gridSize; col++) {
+                        if (board[row][col] === 0) {
+                            const nums = Array.from({length: gridSize}, (_, i) => i + 1);
+                            shuffleArray(nums);
+                            
+                            for (let num of nums) {
+                                if (isValid(board, row, col, num)) {
+                                    board[row][col] = num;
+                                    if (solve(board)) return true;
+                                    board[row][col] = 0;
+                                }
+                            }
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            solve(board);
+            return board;
+        }
+
+        function generatePuzzle() {
+            solution = generateSolution();
+            grid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            
+            // 计算边缘提示
+            topHints = [];
+            bottomHints = [];
+            leftHints = [];
+            rightHints = [];
+            
+            for (let col = 0; col < gridSize; col++) {
+                const column = solution.map(row => row[col]);
+                topHints.push(calculateVisibility(column));
+                bottomHints.push(calculateVisibility([...column].reverse()));
+            }
+            
+            for (let row = 0; row < gridSize; row++) {
+                leftHints.push(calculateVisibility(solution[row]));
+                rightHints.push(calculateVisibility([...solution[row]].reverse()));
+            }
+            
+            history = [];
+            selectedCell = null;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function renderHints() {
+            // 顶部提示
+            const topEl = document.getElementById('top-hints');
+            topEl.innerHTML = '';
+            topEl.style.display = 'grid';
+            topEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            topEl.style.gap = '3px';
+            
+            for (let i = 0; i < gridSize; i++) {
+                const hint = document.createElement('div');
+                hint.className = 'hint-number';
+                hint.textContent = topHints[i];
+                hint.id = `top-${i}`;
+                topEl.appendChild(hint);
+            }
+            
+            // 底部提示
+            const bottomEl = document.getElementById('bottom-hints');
+            bottomEl.innerHTML = '';
+            bottomEl.style.display = 'grid';
+            bottomEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            bottomEl.style.gap = '3px';
+            
+            for (let i = 0; i < gridSize; i++) {
+                const hint = document.createElement('div');
+                hint.className = 'hint-number';
+                hint.textContent = bottomHints[i];
+                hint.id = `bottom-${i}`;
+                bottomEl.appendChild(hint);
+            }
+            
+            // 左侧提示
+            const leftEl = document.getElementById('left-hints');
+            leftEl.innerHTML = '';
+            leftEl.style.display = 'grid';
+            leftEl.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+            leftEl.style.gap = '3px';
+            
+            for (let i = 0; i < gridSize; i++) {
+                const hint = document.createElement('div');
+                hint.className = 'hint-number';
+                hint.textContent = leftHints[i];
+                hint.id = `left-${i}`;
+                leftEl.appendChild(hint);
+            }
+            
+            // 右侧提示
+            const rightEl = document.getElementById('right-hints');
+            rightEl.innerHTML = '';
+            rightEl.style.display = 'grid';
+            rightEl.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+            rightEl.style.gap = '3px';
+            
+            for (let i = 0; i < gridSize; i++) {
+                const hint = document.createElement('div');
+                hint.className = 'hint-number';
+                hint.textContent = rightHints[i];
+                hint.id = `right-${i}`;
+                rightEl.appendChild(hint);
+            }
+        }
+
+        function renderGrid() {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach((cell, idx) => {
+                const row = Math.floor(idx / gridSize);
+                const col = idx % gridSize;
+                const value = grid[row][col];
+                
+                cell.className = 'cell';
+                cell.textContent = value || '';
+                
+                if (idx === selectedCell) {
+                    cell.classList.add('selected');
+                }
+                
+                if (value !== 0) {
+                    // 高亮相同数字
+                    if (selectedCell !== null) {
+                        const selRow = Math.floor(selectedCell / gridSize);
+                        const selCol = selectedCell % gridSize;
+                        if (grid[selRow][selCol] === value && idx !== selectedCell) {
+                            cell.classList.add('same-number');
+                        }
+                    }
+                    
+                    // 检查冲突
+                    if (hasConflict(row, col, value)) {
+                        cell.classList.add('conflict');
+                    }
+                }
+            });
+            
+            updateHintStatus();
+        }
+
+        function hasConflict(row, col, num) {
+            // 检查行冲突
+            for (let c = 0; c < gridSize; c++) {
+                if (c !== col && grid[row][c] === num) return true;
+            }
+            
+            // 检查列冲突
+            for (let r = 0; r < gridSize; r++) {
+                if (r !== row && grid[r][col] === num) return true;
+            }
+            
+            return false;
+        }
+
+        function updateHintStatus() {
+            // 检查每行每列是否满足visibility约束
+            for (let i = 0; i < gridSize; i++) {
+                const row = grid[i];
+                const col = grid.map(r => r[i]);
+                
+                // 检查行是否填满
+                const rowFull = row.every(n => n !== 0);
+                const colFull = col.every(n => n !== 0);
+                
+                // 更新左侧提示
+                const leftHint = document.getElementById(`left-${i}`);
+                if (rowFull) {
+                    const visible = calculateVisibility(row);
+                    leftHint.classList.toggle('satisfied', visible === leftHints[i]);
+                    leftHint.classList.toggle('error', visible !== leftHints[i]);
+                } else {
+                    leftHint.classList.remove('satisfied', 'error');
+                }
+                
+                // 更新右侧提示
+                const rightHint = document.getElementById(`right-${i}`);
+                if (rowFull) {
+                    const visible = calculateVisibility([...row].reverse());
+                    rightHint.classList.toggle('satisfied', visible === rightHints[i]);
+                    rightHint.classList.toggle('error', visible !== rightHints[i]);
+                } else {
+                    rightHint.classList.remove('satisfied', 'error');
+                }
+                
+                // 更新顶部提示
+                const topHint = document.getElementById(`top-${i}`);
+                if (colFull) {
+                    const visible = calculateVisibility(col);
+                    topHint.classList.toggle('satisfied', visible === topHints[i]);
+                    topHint.classList.toggle('error', visible !== topHints[i]);
+                } else {
+                    topHint.classList.remove('satisfied', 'error');
+                }
+                
+                // 更新底部提示
+                const bottomHint = document.getElementById(`bottom-${i}`);
+                if (colFull) {
+                    const visible = calculateVisibility([...col].reverse());
+                    bottomHint.classList.toggle('satisfied', visible === bottomHints[i]);
+                    bottomHint.classList.toggle('error', visible !== bottomHints[i]);
+                } else {
+                    bottomHint.classList.remove('satisfied', 'error');
+                }
+            }
+        }
+
+        function onCellClick(idx) {
+            selectedCell = idx;
+            renderGrid();
+        }
+
+        function inputNumber(num) {
+            if (selectedCell === null) {
+                showToast('请先选择一个格子', 'error');
+                return;
+            }
+            
+            const row = Math.floor(selectedCell / gridSize);
+            const col = selectedCell % gridSize;
+            
+            history.push({
+                row, col,
+                value: grid[row][col]
+            });
+            if (history.length > 50) history.shift();
+            
+            grid[row][col] = num;
+            renderGrid();
+            updateStats();
+            
+            if (isComplete()) {
+                setTimeout(showVictory, 300);
+            }
+        }
+
+        function isComplete() {
+            for (let row of grid) {
+                if (row.some(n => n === 0)) return false;
+            }
+            
+            // 检查所有约束
+            for (let i = 0; i < gridSize; i++) {
+                const row = grid[i];
+                const col = grid.map(r => r[i]);
+                
+                if (calculateVisibility(row) !== leftHints[i]) return false;
+                if (calculateVisibility([...row].reverse()) !== rightHints[i]) return false;
+                if (calculateVisibility(col) !== topHints[i]) return false;
+                if (calculateVisibility([...col].reverse()) !== bottomHints[i]) return false;
+            }
+            
+            return true;
+        }
+
+        function updateStats() {
+            let filled = 0;
+            for (let row of grid) {
+                filled += row.filter(n => n !== 0).length;
+            }
+            
+            document.getElementById('filled-count').textContent = filled;
+            document.getElementById('remaining-count').textContent = gridSize * gridSize - filled;
+        }
+
+        function undo() {
+            if (history.length === 0) {
+                showToast('没有可撤销的操作', 'error');
+                return;
+            }
+            
+            const last = history.pop();
+            grid[last.row][last.col] = last.value;
+            renderGrid();
+            updateStats();
+            showToast('↩️ 已撤销', 'success');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 1500);
+        }
+
+        function showVictory() {
+            document.getElementById('victory-size').textContent = `${gridSize}×${gridSize}`;
+            document.getElementById('victory-modal').classList.add('show');
+        }
+
+        function nextLevel() {
+            document.getElementById('victory-modal').classList.remove('show');
+            const levels = [4, 5, 6];
+            const currentIndex = levels.indexOf(gridSize);
+            if (currentIndex < levels.length - 1) {
+                selectedLevel = levels[currentIndex + 1];
+            }
+            startGame();
+        }
+
+        function showLevelModal() {
+            document.getElementById('level-modal').classList.add('show');
+        }
+
+        function closeLevelModal() {
+            document.getElementById('level-modal').classList.remove('show');
+        }
+
+        function selectLevel(level) {
+            selectedLevel = level;
+            document.querySelectorAll('.level-option').forEach(opt => {
+                opt.classList.toggle('selected', parseInt(opt.dataset.level) === level);
+            });
+        }
+
+        function startGame() {
+            gridSize = selectedLevel;
+            
+            const labels = { 4: '4×4', 5: '5×5', 6: '6×6' };
+            const diffLabels = { 4: '简单', 5: '进阶', 6: '困难' };
+            document.getElementById('level-badge').textContent = labels[gridSize];
+            document.getElementById('difficulty-text').textContent = diffLabels[gridSize];
+            
+            closeLevelModal();
+            init();
+            showToast('🎮 新游戏开始！', 'success');
+        }
+
+        function showRules() {
+            document.getElementById('rules-modal').classList.add('show');
+        }
+
+        function closeRulesModal() {
+            document.getElementById('rules-modal').classList.remove('show');
+        }
+
+        function toggleSwitcher() {
+            document.getElementById('switcher-menu').classList.toggle('show');
+        }
+
+        // 点击其他地方关闭菜单
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-switcher') && !e.target.closest('.switcher-menu')) {
+                document.getElementById('switcher-menu').classList.remove('show');
+            }
+        });
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>
