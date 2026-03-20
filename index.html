@@ -1129,7 +1129,15 @@
                     const currentRow = Math.floor(idx / 9);
                     const currentCol = idx % 9;
                     
-                    if (currentRow === selectedRow || currentCol === selectedCol) {
+                    // 计算宫的位置 (3x3区块)
+                    const selectedBoxRow = Math.floor(selectedRow / 3);
+                    const selectedBoxCol = Math.floor(selectedCol / 3);
+                    const currentBoxRow = Math.floor(currentRow / 3);
+                    const currentBoxCol = Math.floor(currentCol / 3);
+                    const isSameBox = selectedBoxRow === currentBoxRow && selectedBoxCol === currentBoxCol;
+                    
+                    // 高亮同行、同列、同宫
+                    if (currentRow === selectedRow || currentCol === selectedCol || isSameBox) {
                         cell.classList.add('highlight');
                     }
                     
