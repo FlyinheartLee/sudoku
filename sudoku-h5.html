@@ -855,63 +855,6 @@
             border-radius: 1px;
         }
 
-        .game-switcher {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
-            transition: transform 0.2s;
-            z-index: 20;
-        }
-
-        .game-switcher:active {
-            transform: scale(0.92);
-        }
-
-        .switcher-menu {
-            position: absolute;
-            top: 56px;
-            right: 16px;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 16px;
-            padding: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            display: none;
-            z-index: 1000;
-            min-width: 160px;
-        }
-
-        .switcher-menu.show {
-            display: block;
-        }
-
-        .switcher-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            border-radius: 12px;
-            text-decoration: none;
-            color: #374151;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .switcher-item:hover {
-            background: #f3f4f6;
-        }
-
-        .switcher-item.active {
-            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            color: #4f46e5;
-        }
-
         /* 游戏导航菜单 */
         .game-nav {
             position: relative;
@@ -990,7 +933,6 @@
             <div class="logo-text">数独 Master</div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-            <div class="game-switcher" onclick="toggleSwitcher()" title="切换游戏">🎮</div>
             <span class="difficulty-badge" id="difficulty-badge">困难</span>
             <div class="menu-btn" onclick="showNewGameModal()">
                 <span></span>
@@ -998,18 +940,6 @@
                 <span></span>
             </div>
         </div>
-    </div>
-
-    <div class="switcher-menu" id="switcher-menu">
-        <a href="index.html" class="switcher-item active">
-            <span>🧩</span> 数独 Master
-        </a>
-        <a href="number-maze.html" class="switcher-item">
-            <span>🔢</span> 数字迷宫
-        </a>
-        <a href="skyscraper.html" class="switcher-item">
-            <span>🏢</span> 摩天楼
-        </a>
     </div>
 
     <!-- 统计栏 - 压缩版本 -->
@@ -1762,18 +1692,6 @@
                 toast.classList.remove('show');
             }, 2000);
         }
-
-        // 切换游戏菜单
-        function toggleSwitcher() {
-            document.getElementById('switcher-menu').classList.toggle('show');
-        }
-
-        // 点击其他地方关闭菜单
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.game-switcher') && !e.target.closest('.switcher-menu')) {
-                document.getElementById('switcher-menu').classList.remove('show');
-            }
-        });
 
         // 游戏导航菜单
         function toggleNav() {
