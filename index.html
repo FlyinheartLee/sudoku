@@ -343,6 +343,12 @@
             50% { transform: scale(1.08); box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6); }
         }
 
+        /* 笔记模式下，数字按钮已选状态（当前格子已有该笔记） */
+        .num-btn.note-selected {
+            border: 3px solid #ef4444 !important;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
         .cell.notes-mode {
             background: #f0f9ff !important;
             box-shadow: inset 0 0 0 2px #60a5fa, 0 0 0 2px #93c5fd;
@@ -1248,7 +1254,7 @@
             return null;
         }
 
-        // 更新数字按钮唯余法提示
+        // 更新数字按钮唯余法提示和笔记选中状态
         function updateNumberPadHighlight() {
             try {
                 const uniqueNum = findUniqueNumberForCell(selectedCell);
@@ -1256,10 +1262,16 @@
                 
                 numBtns.forEach(btn => {
                     const num = parseInt(btn.dataset.num);
-                    btn.classList.remove('unique-number');
+                    btn.classList.remove('unique-number', 'note-selected');
                     
+                    // 唯余法高亮
                     if (uniqueNum !== null && num === uniqueNum) {
                         btn.classList.add('unique-number');
+                    }
+                    
+                    // 笔记模式下，当前格子已有该笔记则显示红框
+                    if (notesMode && selectedCell !== null && notes[selectedCell].has(num)) {
+                        btn.classList.add('note-selected');
                     }
                 });
             } catch (e) {
