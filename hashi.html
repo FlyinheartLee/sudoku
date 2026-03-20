@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="精美数桥游戏 - 连接所有岛屿的智慧挑战">
+    <title>数桥 Master</title>
+    
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIuWvj+acnyBNYXN0ZXIiLCAic2hvcnRfbmFtZSI6ICLlr4/mlq8iLCAic3RhcnRfdXJsIjogIi4iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzNiODJmNiIsICJ0aGVtZV9jb2xvciI6ICIjM2I4MmY2In0=">
+    
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #93c5fd;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e3a5f;
+            --text-primary: #ffffff;
+            --text-secondary: #bfdbfe;
+            --border: #1d4ed8;
+            --shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.4);
+            --island-bg: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
+            --island-satisfied: linear-gradient(145deg, #10b981 0%, #059669 100%);
+            --island-overflow: linear-gradient(145deg, #ef4444 0%, #dc2626 100%);
+            --bridge-color: #3b82f6;
+            --bridge-double: #60a5fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 30%, #1e40af 70%, #3b82f6 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        /* 背景装饰 */
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 60%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 50%);
+            animation: pulse 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        /* 顶部栏 */
+        .header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            padding-top: max(8px, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.1rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .difficulty-badge {
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 16px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 统计栏 */
+        .stats-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 6px 16px;
+            flex-shrink: 0;
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-value.time {
+            color: var(--primary-light);
+        }
+
+        .stat-value.bridges {
+            color: var(--secondary);
+        }
+
+        /* 游戏区域 */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 6px 16px;
+            min-height: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 60px rgba(59, 130, 246, 0.3);
+            width: 100%;
+            max-width: min(92vw, 420px);
+            aspect-ratio: 1;
+            position: relative;
+        }
+
+        .grid-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+            border-radius: 18px;
+            z-index: -1;
+            opacity: 0.8;
+        }
+
+        .hashi-grid {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .grid-cell {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 岛屿样式 */
+        .island {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1rem, 4vw, 1.4rem);
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .island:hover {
+            transform: scale(1.1);
+        }
+
+        .island:active {
+            transform: scale(0.95);
+        }
+
+        .island.normal {
+            background: var(--island-bg);
+        }
+
+        .island.satisfied {
+            background: var(--island-satisfied);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .island.overflow {
+            background: var(--island-overflow);
+            animation: shake 0.5s ease;
+        }
+
+        .island.selected {
+            box-shadow: 0 0 0 4px #fbbf24, 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            transform: scale(1.15);
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3); }
+            50% { box-shadow: 0 4px 30px rgba(16, 185, 129, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.3); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        /* 桥的样式 */
+        .bridge {
+            position: absolute;
+            background: var(--bridge-color);
+            z-index: 5;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .bridge.horizontal {
+            height: 6px;
+        }
+
+        .bridge.horizontal.double {
+            height: 14px;
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--bridge-color) 0px,
+                var(--bridge-color) 5px,
+                transparent 5px,
+                transparent 9px
+            );
+        }
+
+        .bridge.vertical {
+            width: 6px;
+        }
+
+        .bridge.vertical.double {
+            width: 14px;
+            background: repeating-linear-gradient(
+                to right,
+                var(--bridge-color) 0px,
+                var(--bridge-color) 5px,
+                transparent 5px,
+                transparent 9px
+            );
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            flex-shrink: 0;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .tool-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tool-btn-new {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+        }
+
+        .tool-btn-new:active {
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+        }
+
+        .tool-btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #2563eb;
+            border: 1px solid #93c5fd;
+        }
+
+        .tool-btn-secondary:active {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        /* 提示文字 */
+        .hint-text {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .hint-text span {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 24px;
+            padding: 28px;
+            width: 100%;
+            max-width: 340px;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 60px rgba(59, 130, 246, 0.3);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal h2 {
+            color: #1e293b;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .difficulty-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .difficulty-option {
+            padding: 16px 20px;
+            background: rgba(241, 245, 249, 0.8);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .difficulty-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .difficulty-option:hover {
+            background: rgba(224, 231, 255, 0.8);
+            transform: translateX(4px);
+        }
+
+        .difficulty-option.selected {
+            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+            border-color: #3b82f6;
+        }
+
+        .difficulty-option.selected::before {
+            opacity: 1;
+        }
+
+        .difficulty-option .label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .difficulty-option .desc {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .modal-btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(241, 245, 249, 0.8);
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal-btn-secondary:active {
+            background: rgba(226, 232, 240, 0.8);
+        }
+
+        /* 胜利弹窗 */
+        .victory-modal {
+            text-align: center;
+        }
+
+        .victory-icon {
+            font-size: 5rem;
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .victory-time {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 16px 0;
+        }
+
+        .victory-modal p {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        /* Toast 消息 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.98);
+            color: #1e293b;
+            padding: 16px 28px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2000;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .toast.success {
+            border-color: #10b981;
+            background: rgba(236, 253, 245, 0.98);
+            color: #059669;
+        }
+
+        .toast.error {
+            border-color: #ef4444;
+            background: rgba(254, 242, 242, 0.98);
+            color: #dc2626;
+        }
+
+        /* 规则弹窗 */
+        .rules-content {
+            text-align: left;
+            color: #475569;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .rules-content ol {
+            padding-left: 20px;
+            margin: 12px 0;
+        }
+
+        .rules-content li {
+            margin: 8px 0;
+        }
+
+        .rules-content strong {
+            color: #3b82f6;
+        }
+
+        /* 横屏优化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 6px 12px;
+            }
+            
+            .logo-text {
+                font-size: 1rem;
+            }
+            
+            .stats-bar {
+                padding: 4px 10px;
+                gap: 12px;
+            }
+            
+            .stat-card {
+                padding: 3px 10px;
+            }
+
+            .stat-value {
+                font-size: 0.9rem;
+            }
+            
+            .toolbar {
+                padding: 4px 8px;
+            }
+
+            .tool-btn {
+                padding: 5px 8px;
+                font-size: 0.7rem;
+            }
+
+            .hint-text {
+                padding: 4px 10px;
+                font-size: 0.75rem;
+            }
+
+            .island {
+                font-size: clamp(0.8rem, 3vw, 1.1rem);
+            }
+        }
+
+        /* 游戏切换器 */
+        .game-switcher {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+            transition: transform 0.2s;
+            z-index: 20;
+        }
+
+        .game-switcher:active {
+            transform: scale(0.92);
+        }
+
+        .switcher-menu {
+            position: absolute;
+            top: 56px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+            min-width: 180px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .switcher-menu.show {
+            display: block;
+        }
+
+        .switcher-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .switcher-item:hover {
+            background: #f3f4f6;
+        }
+
+        .switcher-item.active {
+            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+            color: #2563eb;
+        }
+
+        /* 菜单按钮 */
+        .menu-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .menu-btn span {
+            width: 16px;
+            height: 2px;
+            background: #2563eb;
+            border-radius: 1px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="bg-decoration"></div>
+
+    <!-- 顶部栏 -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🌉</div>
+            <div class="logo-text">数桥 Master</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="game-switcher" onclick="toggleSwitcher()" title="切换游戏">🎮</div>
+            <span class="difficulty-badge" id="difficulty-badge">中等</span>
+            <div class="menu-btn" onclick="showNewGameModal()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏切换菜单 -->
+    <div class="switcher-menu" id="switcher-menu">
+        <a href="sudoku-h5.html" class="switcher-item">
+            <span>🧩</span> 数独
+        </a>
+        <a href="number-maze.html" class="switcher-item">
+            <span>🔢</span> 数字迷宫
+        </a>
+        <a href="skyscraper.html" class="switcher-item">
+            <span>🏢</span> 摩天楼
+        </a>
+        <a href="game2048.html" class="switcher-item">
+            <span>🔢</span> 2048
+        </a>
+        <a href="klotski.html" class="switcher-item">
+            <span>🧩</span> 华容道
+        </a>
+        <a href="minesweeper.html" class="switcher-item">
+            <span>💣</span> 扫雷
+        </a>
+        <a href="pipe.html" class="switcher-item">
+            <span>🔧</span> 接水管
+        </a>
+        <a href="memory.html" class="switcher-item">
+            <span>🃏</span> 记忆翻牌
+        </a>
+        <a href="sokoban.html" class="switcher-item">
+            <span>📦</span> 推箱子
+        </a>
+        <a href="hashi.html" class="switcher-item active">
+            <span>🌉</span> 数桥
+        </a>
+    </div>
+
+    <!-- 统计栏 -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">⏱️</span>
+            <span class="stat-value time" id="timer">00:00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">🌉</span>
+            <span class="stat-value bridges" id="bridge-count">0</span>
+        </div>
+    </div>
+
+    <!-- 提示文字 -->
+    <div class="hint-text">
+        点击两个岛屿之间建桥 · <span>单击</span>=1座 · <span>双击</span>=2座
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="game-area">
+        <div class="grid-container">
+            <div class="hashi-grid" id="grid"></div>
+        </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="toolbar">
+        <button class="tool-btn tool-btn-new" onclick="showNewGameModal()">
+            <span>🎮</span> 新游戏
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="clearAllBridges()">
+            <span>🗑️</span> 清空
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="undo()">
+            <span>↩️</span> 撤销
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="showRules()">
+            <span>📖</span> 规则
+        </button>
+    </div>
+
+    <!-- 难度选择弹窗 -->
+    <div class="modal-overlay" id="newgame-modal">
+        <div class="modal">
+            <h2>选择难度</h2>
+            <div class="difficulty-options">
+                <div class="difficulty-option" data-level="easy" onclick="selectDifficulty('easy')">
+                    <span class="label">🌱 简单</span>
+                    <span class="desc">小棋盘，轻松入门</span>
+                </div>
+                <div class="difficulty-option selected" data-level="medium" onclick="selectDifficulty('medium')">
+                    <span class="label">🌿 中等</span>
+                    <span class="desc">标准棋盘，经典挑战</span>
+                </div>
+                <div class="difficulty-option" data-level="hard" onclick="selectDifficulty('hard')">
+                    <span class="label">🌳 困难</span>
+                    <span class="desc">大棋盘，烧脑级别</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="startNewGame()">开始游戏</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则弹窗 -->
+    <div class="modal-overlay" id="rules-modal">
+        <div class="modal">
+            <h2>🌉 数桥规则</h2>
+            <div class="rules-content">
+                <ol>
+                    <li>棋盘上分布着带<strong>数字</strong>的圆形岛屿</li>
+                    <li>数字表示该岛屿需要连接的<strong>桥的总数</strong></li>
+                    <li>岛屿之间可以建桥，<strong>最多2座桥</strong>连接同一对岛屿</li>
+                    <li>桥只能<strong>水平或垂直</strong>连接，<strong>不能交叉</strong></li>
+                    <li>所有岛屿必须通过桥<strong>连通</strong>（形成连通图）</li>
+                </ol>
+                <p>💡 <strong>操作提示：</strong>点击第一个岛屿选中，再点击第二个岛屿建桥。同一对岛屿点一次建1座，再点一次建2座，再点一次拆除。</p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="closeRules()">明白了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal victory-modal">
+            <div class="victory-icon">🎉</div>
+            <h2>恭喜完成！</h2>
+            <div class="victory-time" id="victory-time">00:00</div>
+            <p>太棒了！你成功连接了所有岛屿！</p>
+            <div class="modal-actions" style="margin-top: 24px;">
+                <button class="modal-btn modal-btn-primary" onclick="closeVictory(); showNewGameModal()">再玩一局</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 游戏配置
+        const DIFFICULTY_CONFIG = {
+            easy: { rows: 5, cols: 5, islandCount: 6 },
+            medium: { rows: 7, cols: 7, islandCount: 10 },
+            hard: { rows: 9, cols: 9, islandCount: 14 }
+        };
+
+        // 游戏状态
+        let grid = [];
+        let islands = [];
+        let bridges = new Map();
+        let selectedIsland = null;
+        let difficulty = 'medium';
+        let timerInterval;
+        let seconds = 0;
+        let history = [];
+        let selectedDifficulty = 'medium';
+        let rows, cols;
+
+        // 初始化
+        function init() {
+            newGame();
+            setupTouch();
+        }
+
+        // 新游戏
+        function newGame() {
+            clearInterval(timerInterval);
+            seconds = 0;
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+
+            const config = DIFFICULTY_CONFIG[difficulty];
+            rows = config.rows;
+            cols = config.cols;
+
+            generatePuzzle(config.islandCount);
+            bridges = new Map();
+            history = [];
+            selectedIsland = null;
+
+            renderGrid();
+            updateBridgeCount();
+            updateDifficultyBadge();
+        }
+
+        // 生成谜题
+        function generatePuzzle(islandCount) {
+            islands = [];
+            grid = Array(rows).fill().map(() => Array(cols).fill(null));
+
+            // 随机生成岛屿位置
+            let attempts = 0;
+            while (islands.length < islandCount && attempts < 1000) {
+                const row = Math.floor(Math.random() * rows);
+                const col = Math.floor(Math.random() * cols);
+                
+                if (grid[row][col] === null && !hasAdjacentIsland(row, col)) {
+                    const island = {
+                        id: islands.length,
+                        row: row,
+                        col: col,
+                        target: 0,
+                        current: 0
+                    };
+                    islands.push(island);
+                    grid[row][col] = island;
+                }
+                attempts++;
+            }
+
+            // 确保连通性并设置目标数字
+            ensureConnectivity();
+            assignTargetNumbers();
+        }
+
+        // 检查是否有相邻岛屿
+        function hasAdjacentIsland(row, col) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of directions) {
+                const nr = row + dr;
+                const nc = col + dc;
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] !== null) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 确保所有岛屿连通
+        function ensureConnectivity() {
+            if (islands.length <= 1) return;
+
+            // 使用最小生成树思想确保连通
+            const connected = new Set([islands[0].id]);
+            const remaining = new Set(islands.slice(1).map(i => i.id));
+
+            while (remaining.size > 0) {
+                let minDist = Infinity;
+                let bestPair = null;
+
+                for (const connectedId of connected) {
+                    for (const remainingId of remaining) {
+                        const i1 = islands[connectedId];
+                        const i2 = islands[remainingId];
+                        const dist = Math.abs(i1.row - i2.row) + Math.abs(i1.col - i2.col);
+                        
+                        if (dist < minDist && canConnectDirectly(i1, i2)) {
+                            minDist = dist;
+                            bestPair = [connectedId, remainingId];
+                        }
+                    }
+                }
+
+                if (bestPair) {
+                    connected.add(bestPair[1]);
+                    remaining.delete(bestPair[1]);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // 检查两个岛屿是否可以直接连接（没有被阻挡）
+        function canConnectDirectly(island1, island2) {
+            if (island1.row === island2.row) {
+                const minCol = Math.min(island1.col, island2.col);
+                const maxCol = Math.max(island1.col, island2.col);
+                for (let c = minCol + 1; c < maxCol; c++) {
+                    if (grid[island1.row][c] !== null) return false;
+                }
+                return true;
+            } else if (island1.col === island2.col) {
+                const minRow = Math.min(island1.row, island2.row);
+                const maxRow = Math.max(island1.row, island2.row);
+                for (let r = minRow + 1; r < maxRow; r++) {
+                    if (grid[r][island1.col] !== null) return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        // 分配目标数字
+        function assignTargetNumbers() {
+            // 为每个岛屿分配一个可行的目标数字
+            for (const island of islands) {
+                // 计算可能的连接数
+                let possibleConnections = 0;
+                for (const other of islands) {
+                    if (other.id !== island.id && canConnectDirectly(island, other)) {
+                        possibleConnections += 2; // 最多2座桥
+                    }
+                }
+                // 随机分配1到min(possibleConnections, 8)之间的数字
+                island.target = Math.min(possibleConnections, Math.floor(Math.random() * 4) + 2);
+                // 确保至少为1
+                if (island.target < 1) island.target = 1;
+            }
+        }
+
+        // 渲染网格
+        function renderGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gridElement.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+            // 创建单元格
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    const island = grid[r][c];
+                    if (island) {
+                        const islandDiv = document.createElement('div');
+                        islandDiv.className = 'island normal';
+                        islandDiv.textContent = island.target;
+                        islandDiv.dataset.id = island.id;
+                        
+                        // 更新状态
+                        updateIslandStatus(islandDiv, island);
+                        
+                        if (selectedIsland === island.id) {
+                            islandDiv.classList.add('selected');
+                        }
+
+                        islandDiv.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            handleIslandClick(island);
+                        });
+
+                        cell.appendChild(islandDiv);
+                    }
+
+                    gridElement.appendChild(cell);
+                }
+            }
+
+            // 渲染桥
+            renderBridges();
+        }
+
+        // 更新岛屿状态样式
+        function updateIslandStatus(element, island) {
+            element.classList.remove('normal', 'satisfied', 'overflow');
+            
+            if (island.current > island.target) {
+                element.classList.add('overflow');
+            } else if (island.current === island.target) {
+                element.classList.add('satisfied');
+            } else {
+                element.classList.add('normal');
+            }
+        }
+
+        // 渲染桥
+        function renderBridges() {
+            const gridElement = document.getElementById('grid');
+            const cells = gridElement.querySelectorAll('.grid-cell');
+
+            // 清除旧桥
+            gridElement.querySelectorAll('.bridge').forEach(b => b.remove());
+
+            // 渲染新桥
+            for (const [key, count] of bridges.entries()) {
+                if (count === 0) continue;
+
+                const [id1, id2] = key.split('-').map(Number);
+                const island1 = islands[id1];
+                const island2 = islands[id2];
+
+                const cell1 = cells[island1.row * cols + island1.col];
+                const cell2 = cells[island2.row * cols + island2.col];
+
+                const bridge = document.createElement('div');
+                bridge.className = 'bridge';
+
+                if (island1.row === island2.row) {
+                    // 水平桥
+                    bridge.classList.add('horizontal');
+                    if (count === 2) bridge.classList.add('double');
+                    
+                    const leftCell = island1.col < island2.col ? cell1 : cell2;
+                    const rightCell = island1.col < island2.col ? cell2 : cell1;
+                    
+                    const leftRect = leftCell.getBoundingClientRect();
+                    const rightRect = rightCell.getBoundingClientRect();
+                    const gridRect = gridElement.getBoundingClientRect();
+                    
+                    bridge.style.left = `${leftCell.offsetLeft + leftCell.offsetWidth * 0.5}px`;
+                    bridge.style.top = `${leftCell.offsetTop + leftCell.offsetHeight * 0.5 - (count === 2 ? 7 : 3)}px`;
+                    bridge.style.width = `${rightCell.offsetLeft - leftCell.offsetLeft}px`;
+                } else {
+                    // 垂直桥
+                    bridge.classList.add('vertical');
+                    if (count === 2) bridge.classList.add('double');
+                    
+                    const topCell = island1.row < island2.row ? cell1 : cell2;
+                    const bottomCell = island1.row < island2.row ? cell2 : cell1;
+                    
+                    bridge.style.left = `${topCell.offsetLeft + topCell.offsetWidth * 0.5 - (count === 2 ? 7 : 3)}px`;
+                    bridge.style.top = `${topCell.offsetTop + topCell.offsetHeight * 0.5}px`;
+                    bridge.style.height = `${bottomCell.offsetTop - topCell.offsetTop}px`;
+                }
+
+                gridElement.appendChild(bridge);
+            }
+        }
+
+        // 处理岛屿点击
+        function handleIslandClick(island) {
+            // 记录历史
+            saveHistory();
+
+            if (selectedIsland === null) {
+                // 选择第一个岛屿
+                selectedIsland = island.id;
+                renderGrid();
+            } else if (selectedIsland === island.id) {
+                // 取消选择
+                selectedIsland = null;
+                renderGrid();
+            } else {
+                // 尝试建桥
+                const island1 = islands[selectedIsland];
+                if (canConnectDirectly(island1, island)) {
+                    toggleBridge(selectedIsland, island.id);
+                } else {
+                    showToast('❌ 无法直接连接这两个岛屿', 'error');
+                }
+                selectedIsland = null;
+                renderGrid();
+            }
+        }
+
+        // 切换桥
+        function toggleBridge(id1, id2) {
+            const key = [Math.min(id1, id2), Math.max(id1, id2)].join('-');
+            const current = bridges.get(key) || 0;
+            
+            // 循环：0 -> 1 -> 2 -> 0
+            const next = (current + 1) % 3;
+            
+            if (next === 0) {
+                bridges.delete(key);
+            } else {
+                bridges.set(key, next);
+            }
+
+            // 更新当前连接数
+            updateCurrentCounts();
+            updateBridgeCount();
+
+            // 检查胜利
+            if (checkVictory()) {
+                clearInterval(timerInterval);
+                showVictory();
+            }
+        }
+
+        // 更新当前连接数
+        function updateCurrentCounts() {
+            for (const island of islands) {
+                island.current = 0;
+            }
+
+            for (const [key, count] of bridges.entries()) {
+                const [id1, id2] = key.split('-').map(Number);
+                islands[id1].current += count;
+                islands[id2].current += count;
+            }
+        }
+
+        // 检查桥是否会交叉
+        function wouldCross(bridge1, bridge2) {
+            // 获取桥的位置信息
+            const b1 = getBridgeEndpoints(bridge1);
+            const b2 = getBridgeEndpoints(bridge2);
+
+            // 如果共享端点，不交叉
+            if (shareEndpoint(b1, b2)) return false;
+
+            // 检查交叉
+            return linesIntersect(b1, b2);
+        }
+
+        function getBridgeEndpoints(key) {
+            const [id1, id2] = key.split('-').map(Number);
+            const i1 = islands[id1];
+            const i2 = islands[id2];
+            return { r1: i1.row, c1: i1.col, r2: i2.row, c2: i2.col };
+        }
+
+        function shareEndpoint(b1, b2) {
+            return (b1.r1 === b2.r1 && b1.c1 === b2.c1) ||
+                   (b1.r1 === b2.r2 && b1.c1 === b2.c2) ||
+                   (b1.r2 === b2.r1 && b1.c2 === b2.c1) ||
+                   (b1.r2 === b2.r2 && b1.c2 === b2.c2);
+        }
+
+        function linesIntersect(b1, b2) {
+            // 两条水平或两条垂直线不可能交叉
+            if (b1.r1 === b1.r2 && b2.r1 === b2.r2) return false;
+            if (b1.c1 === b1.c2 && b2.c1 === b2.c2) return false;
+
+            // 一条水平一条垂直
+            if (b1.r1 === b1.r2) {
+                // b1水平，b2垂直
+                const hRow = b1.r1;
+                const vCol = b2.c1;
+                const hMinCol = Math.min(b1.c1, b1.c2);
+                const hMaxCol = Math.max(b1.c1, b1.c2);
+                const vMinRow = Math.min(b2.r1, b2.r2);
+                const vMaxRow = Math.max(b2.r1, b2.r2);
+
+                return hRow > vMinRow && hRow < vMaxRow &&
+                       vCol > hMinCol && vCol < hMaxCol;
+            } else {
+                // b1垂直，b2水平
+                const vRow = b1.c1;
+                const hRow = b2.r1;
+                const vMinRow = Math.min(b1.r1, b1.r2);
+                const vMaxRow = Math.max(b1.r1, b1.r2);
+                const hMinCol = Math.min(b2.c1, b2.c2);
+                const hMaxCol = Math.max(b2.c1, b2.c2);
+
+                return hRow > vMinRow && hRow < vMaxRow &&
+                       vRow > hMinCol && vRow < hMaxCol;
+            }
+        }
+
+        // 检查胜利条件
+        function checkVictory() {
+            // 1. 所有岛屿的连接数等于目标数
+            for (const island of islands) {
+                if (island.current !== island.target) return false;
+            }
+
+            // 2. 所有岛屿连通
+            if (!isAllConnected()) return false;
+
+            return true;
+        }
+
+        // 检查是否所有岛屿连通
+        function isAllConnected() {
+            if (islands.length <= 1) return true;
+
+            const visited = new Set();
+            const queue = [islands[0].id];
+            visited.add(islands[0].id);
+
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                
+                for (const [key, count] of bridges.entries()) {
+                    if (count === 0) continue;
+                    const [id1, id2] = key.split('-').map(Number);
+                    
+                    if (id1 === currentId && !visited.has(id2)) {
+                        visited.add(id2);
+                        queue.push(id2);
+                    } else if (id2 === currentId && !visited.has(id1)) {
+                        visited.add(id1);
+                        queue.push(id1);
+                    }
+                }
+            }
+
+            return visited.size === islands.length;
+        }
+
+        // 保存历史
+        function saveHistory() {
+            const state = {
+                bridges: new Map(bridges),
+                islands: islands.map(i => ({ ...i }))
+            };
+            history.push(state);
+            if (history.length > 50) history.shift();
+        }
+
+        // 撤销
+        function undo() {
+            if (history.length === 0) {
+                showToast('没有可撤销的操作', 'error');
+                return;
+            }
+
+            const state = history.pop();
+            bridges = state.bridges;
+            islands = state.islands;
+            selectedIsland = null;
+            
+            renderGrid();
+            updateBridgeCount();
+            showToast('已撤销', 'success');
+        }
+
+        // 清空所有桥
+        function clearAllBridges() {
+            saveHistory();
+            bridges.clear();
+            updateCurrentCounts();
+            renderGrid();
+            updateBridgeCount();
+            showToast('已清空所有桥梁', 'success');
+        }
+
+        // 更新桥计数
+        function updateBridgeCount() {
+            let total = 0;
+            for (const count of bridges.values()) {
+                total += count;
+            }
+            document.getElementById('bridge-count').textContent = total;
+        }
+
+        // 更新难度徽章
+        function updateDifficultyBadge() {
+            const labels = { easy: '简单', medium: '中等', hard: '困难' };
+            document.getElementById('difficulty-badge').textContent = labels[difficulty];
+        }
+
+        // 计时器
+        function updateTimer() {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+            seconds++;
+        }
+
+        // 弹窗控制
+        function showNewGameModal() {
+            document.getElementById('newgame-modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('newgame-modal').classList.remove('show');
+        }
+
+        function selectDifficulty(level) {
+            selectedDifficulty = level;
+            document.querySelectorAll('.difficulty-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.level === level);
+            });
+        }
+
+        function startNewGame() {
+            difficulty = selectedDifficulty;
+            closeModal();
+            newGame();
+            showToast('🎮 新游戏开始！', 'success');
+        }
+
+        // 规则弹窗
+        function showRules() {
+            document.getElementById('rules-modal').classList.add('show');
+        }
+
+        function closeRules() {
+            document.getElementById('rules-modal').classList.remove('show');
+        }
+
+        // 胜利弹窗
+        function showVictory() {
+            const mins = Math.floor((seconds - 1) / 60).toString().padStart(2, '0');
+            const secs = ((seconds - 1) % 60).toString().padStart(2, '0');
+            document.getElementById('victory-time').textContent = `${mins}:${secs}`;
+            document.getElementById('victory-modal').classList.add('show');
+        }
+
+        function closeVictory() {
+            document.getElementById('victory-modal').classList.remove('show');
+        }
+
+        // 消息提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 切换游戏菜单
+        function toggleSwitcher() {
+            document.getElementById('switcher-menu').classList.toggle('show');
+        }
+
+        // 点击其他地方关闭菜单
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-switcher') && !e.target.closest('.switcher-menu')) {
+                document.getElementById('switcher-menu').classList.remove('show');
+            }
+        });
+
+        // 触摸支持
+        function setupTouch() {
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.closest('.hashi-grid')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>

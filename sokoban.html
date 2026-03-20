@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#84cc16">
+    <title>推箱子 - Sokoban</title>
+    <style>
+        :root {
+            --primary: #84cc16;
+            --primary-dark: #65a30d;
+            --primary-light: #ecfccb;
+            --secondary: #a3e635;
+            --accent: #f59e0b;
+            --wall: #475569;
+            --floor: #f1f5f9;
+            --target: #f59e0b;
+            --box: #92400e;
+            --box-ok: #22c55e;
+            --player: #3b82f6;
+            --bg-dark: #3f6212;
+            --bg-card: #4d7c0f;
+            --text-primary: #ffffff;
+            --text-secondary: #d9f99d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #3f6212 0%, #4d7c0f 30%, #65a30d 70%, #84cc16 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        .game-nav {
+            position: relative;
+            z-index: 100;
+        }
+
+        .nav-toggle {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 101;
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: max(60px, calc(env(safe-area-inset-top) + 50px));
+            right: 10px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+            z-index: 100;
+        }
+
+        .nav-menu.active {
+            display: flex;
+        }
+
+        .nav-menu a {
+            padding: 10px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #333;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .nav-menu a:hover {
+            background: var(--primary-light);
+        }
+
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(163, 230, 53, 0.4) 0%, transparent 60%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 50%);
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, -20px); }
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(132, 204, 22, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(132, 204, 22, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #65a30d 0%, #a3e635 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .level-badge {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 4px 12px rgba(132, 204, 22, 0.4);
+        }
+
+        .stats-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 10px 16px;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 8px 16px;
+            backdrop-filter: blur(10px);
+            min-width: 70px;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-container {
+            background: rgba(30, 41, 59, 0.95);
+            padding: 10px;
+            border-radius: 12px;
+            border: 2px solid rgba(132, 204, 22, 0.5);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(132, 204, 22, 0.2);
+            position: relative;
+        }
+
+        .game-grid {
+            display: grid;
+            gap: 1px;
+            background: #334155;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            min-width: 32px;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .cell.wall {
+            background: linear-gradient(145deg, #64748b 0%, #475569 100%);
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .cell.floor {
+            background: var(--floor);
+            border-radius: 2px;
+        }
+
+        .cell.target {
+            background: linear-gradient(145deg, #fde68a 0%, #fbbf24 100%);
+            border-radius: 50%;
+            box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        .cell.target::after {
+            content: '○';
+            color: #d97706;
+            font-size: 0.8rem;
+        }
+
+        .cell.box {
+            background: linear-gradient(145deg, #92400e 0%, #78350f 100%);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .cell.box::after {
+            content: '📦';
+            font-size: 0.9rem;
+        }
+
+        .cell.box-ok {
+            background: linear-gradient(145deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+            animation: glow 1.5s ease-in-out infinite;
+        }
+
+        .cell.box-ok::after {
+            content: '✓';
+            font-size: 1rem;
+            color: white;
+            font-weight: 800;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+        }
+
+        .cell.player {
+            background: var(--floor);
+        }
+
+        .cell.player::after {
+            content: '🤖';
+            font-size: 1.1rem;
+            z-index: 10;
+        }
+
+        .cell.player-on-target {
+            background: linear-gradient(145deg, #fde68a 0%, #fbbf24 100%);
+            border-radius: 50%;
+        }
+
+        .cell.player-on-target::after {
+            content: '🤖';
+            font-size: 1.1rem;
+        }
+
+        /* 方向按钮 */
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+            padding: 10px;
+        }
+
+        .dpad-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+            border: 2px solid rgba(132, 204, 22, 0.3);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dpad-btn:active {
+            transform: scale(0.92);
+            background: linear-gradient(145deg, #d9f99d 0%, #bef264 100%);
+        }
+
+        .dpad-btn:empty {
+            visibility: hidden;
+        }
+
+        .toolbar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 12px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .tool-btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(132, 204, 22, 0.4);
+        }
+
+        .tool-btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .tool-btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary-dark);
+            border: 2px solid rgba(132, 204, 22, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #ffffff 0%, #ecfccb 100%);
+            border: 2px solid rgba(132, 204, 22, 0.2);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 320px;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal h2 {
+            color: #4d7c0f;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .level-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .level-option {
+            padding: 12px 16px;
+            background: rgba(236, 252, 203, 0.5);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .level-option:hover {
+            background: rgba(132, 204, 22, 0.1);
+            transform: translateX(4px);
+        }
+
+        .level-option.selected {
+            background: linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%);
+            border-color: #84cc16;
+        }
+
+        .level-option .label {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #4d7c0f;
+            display: block;
+        }
+
+        .level-option .desc {
+            font-size: 0.75rem;
+            color: #65a30d;
+            margin-top: 2px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(132, 204, 22, 0.4);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(236, 252, 203, 0.5);
+            color: #4d7c0f;
+            border: 1px solid rgba(132, 204, 22, 0.2);
+        }
+
+        .victory-modal {
+            text-align: center;
+        }
+
+        .victory-icon {
+            font-size: 4rem;
+            margin-bottom: 12px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .final-stats {
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #84cc16, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 8px 0;
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.98);
+            color: #4d7c0f;
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 2000;
+            border: 2px solid rgba(132, 204, 22, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .rules-text {
+            font-size: 0.9rem;
+            color: #65a30d;
+            line-height: 1.6;
+            margin: 15px 0;
+        }
+
+        .rules-text strong {
+            color: #4d7c0f;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-nav">
+        <button class="nav-toggle" onclick="toggleNav()">🎮</button>
+        <div class="nav-menu" id="navMenu">
+            <a href="sudoku-h5.html">🧩 数独</a>
+            <a href="number-maze.html">🔢 数字迷宫</a>
+            <a href="skyscraper.html">🏢 摩天楼</a>
+            <a href="game2048.html">🔢 2048</a>
+            <a href="klotski.html">🧩 华容道</a>
+            <a href="minesweeper.html">💣 扫雷</a>
+            <a href="pipe.html">🔧 接水管</a>
+            <a href="memory.html">🃏 记忆翻牌</a>
+            <a href="sokoban.html">📦 推箱子</a>
+            <a href="hashi.html">🌉 数桥</a>
+        </div>
+    </div>
+
+    <div class="bg-decoration"></div>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">📦</div>
+            <div class="logo-text">推箱子</div>
+        </div>
+        <div class="level-badge" id="level-badge">第1关</div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">关卡</span>
+            <span class="stat-value" id="level-num">1</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">步数</span>
+            <span class="stat-value" id="step-count">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">完成</span>
+            <span class="stat-value" id="completed">0/3</span>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="grid-container">
+            <div class="game-grid" id="grid"></div>
+        </div>
+    </div>
+
+    <!-- 方向键 -->
+    <div class="dpad">
+        <div class="dpad-btn" onclick="movePlayer(0, -1)">⬆️</div>
+        <div class="dpad-btn" onclick="movePlayer(0, -1)">⬆️</div>
+        <div class="dpad-btn" onclick="movePlayer(0, -1)">⬆️</div>
+        <div class="dpad-btn" onclick="movePlayer(-1, 0)">⬅️</div>
+        <div></div>
+        <div class="dpad-btn" onclick="movePlayer(1, 0)">➡️</div>
+        <div class="dpad-btn" onclick="movePlayer(0, 1)">⬇️</div>
+        <div class="dpad-btn" onclick="movePlayer(0, 1)">⬇️</div>
+        <div class="dpad-btn" onclick="movePlayer(0, 1)">⬇️</div>
+    </div>
+
+    <div class="toolbar">
+        <button class="tool-btn tool-btn-secondary" onclick="undo()">
+            <span>↩️</span> 撤销
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="resetLevel()">
+            <span>🔄</span> 重置
+        </button>
+        <button class="tool-btn tool-btn-primary" onclick="showLevelModal()">
+            <span>🎮</span> 选关
+        </button>
+    </div>
+
+    <!-- 关卡选择 -->
+    <div class="modal-overlay" id="level-modal">
+        <div class="modal">
+            <h2>选择关卡</h2>
+            <div class="level-options" id="level-options">
+                <!-- 动态生成 -->
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeLevelModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="startGame()">开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则说明 -->
+    <div class="modal-overlay" id="rules-modal">
+        <div class="modal">
+            <h2>📖 游戏规则</h2>
+            <div class="rules-text">
+                <p><strong>目标：</strong>将所有箱子📦推到目标位置○</p>
+                <p><strong>玩法：</strong>使用方向键或滑动移动机器人🤖</p>
+                <p><strong>规则：</strong></p>
+                <p>• 箱子只能推，不能拉</p>
+                <p>• 一次只能推一个箱子</p>
+                <p>• 箱子推入墙壁角落就死局了</p>
+                <p style="margin-top: 10px;"><strong>提示：</strong>绿色✓表示箱子已就位</p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="closeRules()">明白了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal victory-modal">
+            <div class="victory-icon">🎉</div>
+            <h2>恭喜通关！</h2>
+            <div class="final-stats">
+                <div>步数: <span id="victory-steps">0</span></div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="modal-btn modal-btn-primary" onclick="closeVictory(); nextLevel()">下一关</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeVictory()">再玩一次</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 关卡地图：#=墙， =地板，.=目标，$=箱子，@=玩家，*=箱子在目标上，+=玩家在目标上
+        const LEVELS = [
+            {
+                name: "入门",
+                map: [
+                    "  ##### ",
+                    "###   ##",
+                    "#   $  #",
+                    "#  . $@#",
+                    "#   $  #",
+                    "###   ##",
+                    "  ##### "
+                ]
+            },
+            {
+                name: "简单",
+                map: [
+                    "  #####  ",
+                    "###   ###",
+                    "#  $ $  #",
+                    "#.  @  .#",
+                    "#  $ $  #",
+                    "###   ###",
+                    "  #####  "
+                ]
+            },
+            {
+                name: "进阶",
+                map: [
+                    "########",
+                    "#      #",
+                    "# .  $ #",
+                    "# .$@$.#",
+                    "# $  . #",
+                    "#      #",
+                    "########"
+                ]
+            },
+            {
+                name: "挑战",
+                map: [
+                    "  #####  ",
+                    "  #   #  ",
+                    "###$ $###",
+                    "#  . .  #",
+                    "# $ @ $ #",
+                    "#  . .  #",
+                    "###$ $###",
+                    "  #   #  ",
+                    "  #####  "
+                ]
+            },
+            {
+                name: "困难",
+                map: [
+                    "#########",
+                    "#       #",
+                    "# .   $ #",
+                    "#  $.$  #",
+                    "# .$@$. #",
+                    "#  $.$  #",
+                    "# $   . #",
+                    "#       #",
+                    "#########"
+                ]
+            }
+        ];
+
+        let currentLevel = 0;
+        let grid = [];
+        let playerPos = { x: 0, y: 0 };
+        let stepCount = 0;
+        let history = [];
+
+        function init() {
+            generateLevelOptions();
+            loadLevel(currentLevel);
+        }
+
+        function generateLevelOptions() {
+            const container = document.getElementById('level-options');
+            container.innerHTML = '';
+            
+            LEVELS.forEach((level, idx) => {
+                const opt = document.createElement('div');
+                opt.className = 'level-option' + (idx === currentLevel ? ' selected' : '');
+                opt.dataset.level = idx;
+                opt.onclick = () => selectLevel(idx);
+                opt.innerHTML = `
+                    <span class="label">第 ${idx + 1} 关 - ${level.name}</span>
+                    <span class="desc">点击选择</span>
+                `;
+                container.appendChild(opt);
+            });
+        }
+
+        function loadLevel(levelIdx) {
+            currentLevel = levelIdx;
+            const level = LEVELS[levelIdx];
+            stepCount = 0;
+            history = [];
+            
+            document.getElementById('level-badge').textContent = `第${levelIdx + 1}关`;
+            document.getElementById('level-num').textContent = levelIdx + 1;
+            document.getElementById('step-count').textContent = 0;
+            
+            // 解析地图
+            grid = [];
+            for (let y = 0; y < level.map.length; y++) {
+                const row = [];
+                for (let x = 0; x < level.map[y].length; x++) {
+                    const char = level.map[y][x];
+                    let cell = { type: 'floor', hasBox: false, isTarget: false };
+                    
+                    switch (char) {
+                        case '#': cell.type = 'wall'; break;
+                        case ' ': cell.type = 'floor'; break;
+                        case '.': cell.type = 'floor'; cell.isTarget = true; break;
+                        case '$': cell.type = 'floor'; cell.hasBox = true; break;
+                        case '@': cell.type = 'floor'; playerPos = { x, y }; break;
+                        case '*': cell.type = 'floor'; cell.hasBox = true; cell.isTarget = true; break;
+                        case '+': cell.type = 'floor'; cell.isTarget = true; playerPos = { x, y }; break;
+                    }
+                    row.push(cell);
+                }
+                grid.push(row);
+            }
+            
+            renderGrid();
+            updateCompleted();
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            
+            const rows = grid.length;
+            const cols = grid[0].length;
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const cell = grid[y][x];
+                    const cellEl = document.createElement('div');
+                    
+                    // 基础类型
+                    if (cell.type === 'wall') {
+                        cellEl.className = 'cell wall';
+                    } else {
+                        // 地板或目标
+                        if (cell.isTarget && cell.hasBox) {
+                            cellEl.className = 'cell box-ok';
+                        } else if (cell.hasBox) {
+                            cellEl.className = 'cell box';
+                        } else if (cell.isTarget) {
+                            cellEl.className = 'cell target';
+                        } else {
+                            cellEl.className = 'cell floor';
+                        }
+                        
+                        // 玩家
+                        if (playerPos.x === x && playerPos.y === y) {
+                            cellEl.classList.remove('floor', 'target');
+                            cellEl.classList.add(cell.isTarget ? 'player-on-target' : 'player');
+                        }
+                    }
+                    
+                    gridEl.appendChild(cellEl);
+                }
+            }
+        }
+
+        function movePlayer(dx, dy) {
+            const newX = playerPos.x + dx;
+            const newY = playerPos.y + dy;
+            
+            // 检查边界
+            if (newY < 0 || newY >= grid.length || newX < 0 || newX >= grid[0].length) return;
+            
+            const targetCell = grid[newY][newX];
+            
+            // 检查是否是墙
+            if (targetCell.type === 'wall') return;
+            
+            // 保存历史
+            saveState();
+            
+            // 检查是否有箱子
+            if (targetCell.hasBox) {
+                // 检查箱子能否被推动
+                const boxNewX = newX + dx;
+                const boxNewY = newY + dy;
+                
+                if (boxNewY < 0 || boxNewY >= grid.length || boxNewX < 0 || boxNewX >= grid[0].length) return;
+                
+                const boxTargetCell = grid[boxNewY][boxNewX];
+                if (boxTargetCell.type === 'wall' || boxTargetCell.hasBox) return;
+                
+                // 移动箱子
+                targetCell.hasBox = false;
+                boxTargetCell.hasBox = true;
+            }
+            
+            // 移动玩家
+            playerPos.x = newX;
+            playerPos.y = newY;
+            stepCount++;
+            
+            document.getElementById('step-count').textContent = stepCount;
+            renderGrid();
+            updateCompleted();
+            
+            // 检查胜利
+            if (checkVictory()) {
+                setTimeout(showVictory, 300);
+            }
+        }
+
+        function saveState() {
+            history.push({
+                playerPos: { ...playerPos },
+                grid: grid.map(row => row.map(cell => ({ ...cell }))),
+                stepCount
+            });
+            if (history.length > 50) history.shift();
+        }
+
+        function undo() {
+            if (history.length === 0) {
+                showToast('无法撤销', 'error');
+                return;
+            }
+            
+            const state = history.pop();
+            playerPos = state.playerPos;
+            grid = state.grid;
+            stepCount = state.stepCount;
+            
+            document.getElementById('step-count').textContent = stepCount;
+            renderGrid();
+            updateCompleted();
+            showToast('已撤销', 'success');
+        }
+
+        function updateCompleted() {
+            let targets = 0;
+            let boxesOnTarget = 0;
+            
+            for (let row of grid) {
+                for (let cell of row) {
+                    if (cell.isTarget) {
+                        targets++;
+                        if (cell.hasBox) boxesOnTarget++;
+                    }
+                }
+            }
+            
+            document.getElementById('completed').textContent = `${boxesOnTarget}/${targets}`;
+        }
+
+        function checkVictory() {
+            for (let row of grid) {
+                for (let cell of row) {
+                    if (cell.isTarget && !cell.hasBox) return false;
+                }
+            }
+            return true;
+        }
+
+        function resetLevel() {
+            loadLevel(currentLevel);
+            showToast('已重置', 'success');
+        }
+
+        function showVictory() {
+            document.getElementById('victory-steps').textContent = stepCount;
+            document.getElementById('victory-modal').classList.add('show');
+        }
+
+        function closeVictory() {
+            document.getElementById('victory-modal').classList.remove('show');
+        }
+
+        function nextLevel() {
+            closeVictory();
+            if (currentLevel < LEVELS.length - 1) {
+                loadLevel(currentLevel + 1);
+            } else {
+                showToast('恭喜！你已完成所有关卡！', 'success');
+                loadLevel(0);
+            }
+        }
+
+        function showLevelModal() {
+            generateLevelOptions();
+            document.getElementById('level-modal').classList.add('show');
+        }
+
+        function closeLevelModal() {
+            document.getElementById('level-modal').classList.remove('show');
+        }
+
+        function selectLevel(level) {
+            currentLevel = level;
+            document.querySelectorAll('.level-option').forEach((opt, idx) => {
+                opt.classList.toggle('selected', idx === level);
+            });
+        }
+
+        function startGame() {
+            closeLevelModal();
+            loadLevel(currentLevel);
+            showToast('🎮 新游戏开始！', 'success');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+
+        function toggleNav() {
+            document.getElementById('navMenu').classList.toggle('active');
+        }
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp': movePlayer(0, -1); break;
+                case 'ArrowDown': movePlayer(0, 1); break;
+                case 'ArrowLeft': movePlayer(-1, 0); break;
+                case 'ArrowRight': movePlayer(1, 0); break;
+            }
+        });
+
+        // 触摸滑动控制
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        document.querySelector('.game-area').addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        document.querySelector('.game-area').addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            const minSwipe = 40;
+            
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > minSwipe) {
+                movePlayer(dx > 0 ? 1 : -1, 0);
+            } else if (Math.abs(dy) > minSwipe) {
+                movePlayer(0, dy > 0 ? 1 : -1);
+            }
+        }, { passive: true });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-nav')) {
+                document.getElementById('navMenu').classList.remove('active');
+            }
+        });
+
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
+        init();
+    </script>
+</body>
+</html>

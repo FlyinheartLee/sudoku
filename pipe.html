@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#06b6d4">
+    <title>接水管 - Pipe Puzzle</title>
+    <style>
+        :root {
+            --primary: #06b6d4;
+            --primary-dark: #0891b2;
+            --primary-light: #cffafe;
+            --secondary: #22d3ee;
+            --accent: #f59e0b;
+            --bg-dark: #164e63;
+            --bg-card: #155e75;
+            --text-primary: #ffffff;
+            --text-secondary: #a5f3fc;
+            --water: #3b82f6;
+            --water-flow: #60a5fa;
+            --pipe: #64748b;
+            --pipe-active: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #164e63 0%, #155e75 30%, #0891b2 70%, #06b6d4 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        .game-nav {
+            position: relative;
+            z-index: 100;
+        }
+
+        .nav-toggle {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 101;
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: max(60px, calc(env(safe-area-inset-top) + 50px));
+            right: 10px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+            z-index: 100;
+        }
+
+        .nav-menu.active {
+            display: flex;
+        }
+
+        .nav-menu a {
+            padding: 10px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #333;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .nav-menu a:hover {
+            background: var(--primary-light);
+        }
+
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.4) 0%, transparent 60%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 50%);
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, -20px); }
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .level-badge {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+        }
+
+        .stats-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px 16px;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 8px 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-container {
+            background: rgba(30, 41, 59, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            border: 2px solid rgba(6, 182, 212, 0.5);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(6, 182, 212, 0.2);
+            position: relative;
+        }
+
+        .game-grid {
+            display: grid;
+            gap: 4px;
+            background: #0f172a;
+            padding: 6px;
+            border-radius: 10px;
+        }
+
+        .cell {
+            background: linear-gradient(145deg, #475569 0%, #334155 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            aspect-ratio: 1;
+            min-width: 50px;
+            min-height: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .cell.source {
+            background: linear-gradient(145deg, #22c55e 0%, #16a34a 100%);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+        }
+
+        .cell.source::after {
+            content: '💧';
+            font-size: 1.5rem;
+        }
+
+        .cell.target {
+            background: linear-gradient(145deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+
+        .cell.target::after {
+            content: '🎯';
+            font-size: 1.5rem;
+        }
+
+        .cell.target.connected {
+            background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.8); }
+        }
+
+        /* 管道样式 */
+        .pipe {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .pipe-straight {
+            background: linear-gradient(90deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%);
+        }
+
+        .pipe-straight.vertical {
+            background: linear-gradient(180deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%);
+        }
+
+        .pipe-curve {
+            background: 
+                linear-gradient(90deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%),
+                linear-gradient(180deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%);
+            background-position: 0 0, 0 0;
+            background-size: 100% 65%, 65% 100%;
+            background-repeat: no-repeat;
+        }
+
+        .pipe-curve.top-right {
+            transform: rotate(0deg);
+        }
+
+        .pipe-curve.bottom-right {
+            transform: rotate(90deg);
+        }
+
+        .pipe-curve.bottom-left {
+            transform: rotate(180deg);
+        }
+
+        .pipe-curve.top-left {
+            transform: rotate(270deg);
+        }
+
+        .pipe-cross {
+            background: 
+                linear-gradient(90deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%),
+                linear-gradient(180deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%);
+        }
+
+        .pipe-tee {
+            background: 
+                linear-gradient(90deg, transparent 35%, var(--pipe) 35%, var(--pipe) 65%, transparent 65%),
+                linear-gradient(180deg, transparent 35%, var(--pipe) 35%);
+        }
+
+        .pipe-tee.up { transform: rotate(180deg); }
+        .pipe-tee.right { transform: rotate(270deg); }
+        .pipe-tee.down { transform: rotate(0deg); }
+        .pipe-tee.left { transform: rotate(90deg); }
+
+        /* 水流动画 */
+        .cell.has-water .pipe {
+            --pipe: var(--water);
+        }
+
+        .cell.has-water .pipe::after {
+            content: '';
+            position: absolute;
+            top: 35%;
+            left: 35%;
+            width: 30%;
+            height: 30%;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            border-radius: 50%;
+            animation: waterPulse 1s ease-in-out infinite;
+        }
+
+        .cell.has-water .pipe-straight.vertical::after {
+            width: 30%;
+            height: 100%;
+            top: 0;
+            left: 35%;
+            border-radius: 4px;
+        }
+
+        .cell.has-water .pipe-straight:not(.vertical)::after {
+            width: 100%;
+            height: 30%;
+            top: 35%;
+            left: 0;
+            border-radius: 4px;
+        }
+
+        @keyframes waterPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .toolbar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .tool-btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.5);
+        }
+
+        .tool-btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .tool-btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary-dark);
+            border: 2px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #ffffff 0%, #ecfeff 100%);
+            border: 2px solid rgba(6, 182, 212, 0.2);
+            border-radius: 24px;
+            padding: 28px;
+            width: 100%;
+            max-width: 340px;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal h2 {
+            color: #155e75;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .level-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .level-option {
+            padding: 14px 18px;
+            background: rgba(207, 250, 254, 0.5);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .level-option:hover {
+            background: rgba(6, 182, 212, 0.1);
+            transform: translateX(4px);
+        }
+
+        .level-option.selected {
+            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+            border-color: #06b6d4;
+        }
+
+        .level-option .label {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #155e75;
+            display: block;
+        }
+
+        .level-option .desc {
+            font-size: 0.8rem;
+            color: #0e7490;
+            margin-top: 2px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.5);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(207, 250, 254, 0.5);
+            color: #155e75;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .victory-modal {
+            text-align: center;
+        }
+
+        .victory-icon {
+            font-size: 5rem;
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.98);
+            color: #155e75;
+            padding: 16px 28px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 2000;
+            border: 2px solid rgba(6, 182, 212, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .rules-text {
+            font-size: 0.9rem;
+            color: #0e7490;
+            line-height: 1.6;
+            margin: 15px 0;
+        }
+
+        .rules-text strong {
+            color: #155e75;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-nav">
+        <button class="nav-toggle" onclick="toggleNav()">🎮</button>
+        <div class="nav-menu" id="navMenu">
+            <a href="sudoku-h5.html">🧩 数独</a>
+            <a href="number-maze.html">🔢 数字迷宫</a>
+            <a href="skyscraper.html">🏢 摩天楼</a>
+            <a href="game2048.html">🔢 2048</a>
+            <a href="klotski.html">🧩 华容道</a>
+            <a href="minesweeper.html">💣 扫雷</a>
+            <a href="pipe.html">🔧 接水管</a>
+            <a href="memory.html">🃏 记忆翻牌</a>
+            <a href="sokoban.html">📦 推箱子</a>
+            <a href="hashi.html">🌉 数桥</a>
+        </div>
+    </div>
+
+    <div class="bg-decoration"></div>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🔧</div>
+            <div class="logo-text">接水管</div>
+        </div>
+        <div class="level-badge" id="level-badge">第1关</div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">关卡</span>
+            <span class="stat-value" id="level-num">1</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">点击</span>
+            <span class="stat-value" id="click-count">0</span>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="grid-container">
+            <div class="game-grid" id="grid"></div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button class="tool-btn tool-btn-secondary" onclick="showRules()">
+            <span>📖</span> 规则
+        </button>
+        <button class="tool-btn tool-btn-primary" onclick="showLevelModal()">
+            <span>🎮</span> 选关
+        </button>
+    </div>
+
+    <!-- 关卡选择 -->
+    <div class="modal-overlay" id="level-modal">
+        <div class="modal">
+            <h2>选择关卡</h2>
+            <div class="level-options" id="level-options">
+                <!-- 动态生成 -->
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeLevelModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="startGame()">开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则说明 -->
+    <div class="modal-overlay" id="rules-modal">
+        <div class="modal">
+            <h2>📖 游戏规则</h2>
+            <div class="rules-text">
+                <p><strong>目标：</strong>旋转管道，连接水源💧到目标🎯</p>
+                <p><strong>玩法：</strong>点击管道旋转90度</p>
+                <p><strong>管道类型：</strong></p>
+                <p>─ 直管：水平或垂直连接</p>
+                <p>┐ 弯管：90度转弯</p>
+                <p>┼ 十字管：四个方向连接</p>
+                <p>┬ T型管：三通连接</p>
+                <p style="margin-top: 10px;"><strong>提示：</strong>当水流通时，管道会变蓝色</p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="closeRules()">明白了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal victory-modal">
+            <div class="victory-icon">🎉</div>
+            <h2>恭喜通关！</h2>
+            <p style="color: #0e7490; margin: 10px 0;">水流通了！</p>
+            <div class="modal-actions" style="margin-top: 24px;">
+                <button class="modal-btn modal-btn-primary" onclick="closeVictory(); nextLevel()">下一关</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeVictory()">再玩一次</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 管道类型: straight(直), curve(弯), cross(十字), tee(T型)
+        const PIPE_TYPES = ['straight', 'curve', 'cross', 'tee'];
+        const ROTATIONS = [0, 90, 180, 270];
+
+        // 预定义关卡
+        const LEVELS = [
+            { size: 4, source: {x: 0, y: 0}, target: {x: 3, y: 3} },
+            { size: 5, source: {x: 0, y: 2}, target: {x: 4, y: 2} },
+            { size: 5, source: {x: 2, y: 0}, target: {x: 2, y: 4} },
+            { size: 6, source: {x: 0, y: 0}, target: {x: 5, y: 5} },
+            { size: 6, source: {x: 0, y: 3}, target: {x: 5, y: 3} },
+            { size: 7, source: {x: 3, y: 0}, target: {x: 3, y: 6} },
+        ];
+
+        let currentLevel = 0;
+        let grid = [];
+        let clickCount = 0;
+        let gameWon = false;
+
+        function init() {
+            generateLevelOptions();
+            loadLevel(currentLevel);
+        }
+
+        function generateLevelOptions() {
+            const container = document.getElementById('level-options');
+            container.innerHTML = '';
+            
+            LEVELS.forEach((level, idx) => {
+                const opt = document.createElement('div');
+                opt.className = 'level-option' + (idx === currentLevel ? ' selected' : '');
+                opt.dataset.level = idx;
+                opt.onclick = () => selectLevel(idx);
+                opt.innerHTML = `
+                    <span class="label">第 ${idx + 1} 关</span>
+                    <span class="desc">${level.size}×${level.size} 网格</span>
+                `;
+                container.appendChild(opt);
+            });
+        }
+
+        function loadLevel(levelIdx) {
+            currentLevel = levelIdx;
+            const level = LEVELS[levelIdx];
+            clickCount = 0;
+            gameWon = false;
+            
+            document.getElementById('level-badge').textContent = `第${levelIdx + 1}关`;
+            document.getElementById('level-num').textContent = levelIdx + 1;
+            document.getElementById('click-count').textContent = 0;
+            
+            // 生成随机管道网格
+            generateGrid(level.size, level.source, level.target);
+            renderGrid();
+        }
+
+        function generateGrid(size, source, target) {
+            grid = [];
+            for (let y = 0; y < size; y++) {
+                const row = [];
+                for (let x = 0; x < size; x++) {
+                    // 水源和目标固定
+                    if (x === source.x && y === source.y) {
+                        row.push({ type: 'source', rotation: 0 });
+                    } else if (x === target.x && y === target.y) {
+                        row.push({ type: 'target', rotation: 0 });
+                    } else {
+                        // 随机管道类型
+                        const type = PIPE_TYPES[Math.floor(Math.random() * PIPE_TYPES.length)];
+                        const rotation = ROTATIONS[Math.floor(Math.random() * ROTATIONS.length)];
+                        row.push({ type, rotation });
+                    }
+                }
+                grid.push(row);
+            }
+            
+            // 确保有解（简化：确保源和目标之间的路径是连通的）
+            ensureSolvable(size, source, target);
+        }
+
+        function ensureSolvable(size, source, target) {
+            // 简化处理：在源和目标之间创建一条路径
+            let x = source.x, y = source.y;
+            
+            while (x !== target.x || y !== target.y) {
+                if (x < target.x) {
+                    x++;
+                    if (grid[y][x].type !== 'source' && grid[y][x].type !== 'target') {
+                        grid[y][x] = { type: 'straight', rotation: 0 };
+                    }
+                } else if (x > target.x) {
+                    x--;
+                    if (grid[y][x].type !== 'source' && grid[y][x].type !== 'target') {
+                        grid[y][x] = { type: 'straight', rotation: 0 };
+                    }
+                } else if (y < target.y) {
+                    y++;
+                    if (grid[y][x].type !== 'source' && grid[y][x].type !== 'target') {
+                        grid[y][x] = { type: 'straight', rotation: 90 };
+                    }
+                } else if (y > target.y) {
+                    y--;
+                    if (grid[y][x].type !== 'source' && grid[y][x].type !== 'target') {
+                        grid[y][x] = { type: 'straight', rotation: 90 };
+                    }
+                }
+            }
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('grid');
+            const size = grid.length;
+            
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            
+            // 计算水流
+            const waterPath = calculateWaterFlow();
+            const targetConnected = waterPath.some(p => grid[p.y][p.x].type === 'target');
+            
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const cell = document.createElement('div');
+                    const pipe = grid[y][x];
+                    const hasWater = waterPath.some(p => p.x === x && p.y === y);
+                    
+                    cell.className = 'cell';
+                    if (pipe.type === 'source') {
+                        cell.classList.add('source');
+                    } else if (pipe.type === 'target') {
+                        cell.classList.add('target');
+                        if (targetConnected) cell.classList.add('connected');
+                    } else {
+                        if (hasWater) cell.classList.add('has-water');
+                        
+                        const pipeEl = document.createElement('div');
+                        pipeEl.className = getPipeClass(pipe);
+                        pipeEl.style.transform = `rotate(${pipe.rotation}deg)`;
+                        cell.appendChild(pipeEl);
+                        
+                        cell.onclick = () => rotatePipe(x, y);
+                    }
+                    
+                    gridEl.appendChild(cell);
+                }
+            }
+            
+            // 检查胜利
+            if (targetConnected && !gameWon) {
+                gameWon = true;
+                setTimeout(showVictory, 500);
+            }
+        }
+
+        function getPipeClass(pipe) {
+            const base = 'pipe';
+            switch (pipe.type) {
+                case 'straight':
+                    return `${base} pipe-straight ${pipe.rotation % 180 === 0 ? '' : 'vertical'}`;
+                case 'curve':
+                    const curveDir = ['top-right', 'bottom-right', 'bottom-left', 'top-left'][pipe.rotation / 90];
+                    return `${base} pipe-curve ${curveDir}`;
+                case 'cross':
+                    return `${base} pipe-cross`;
+                case 'tee':
+                    const teeDir = ['down', 'left', 'up', 'right'][pipe.rotation / 90];
+                    return `${base} pipe-tee ${teeDir}`;
+                default:
+                    return base;
+            }
+        }
+
+        function rotatePipe(x, y) {
+            if (gameWon) return;
+            
+            const pipe = grid[y][x];
+            if (pipe.type === 'source' || pipe.type === 'target') return;
+            
+            pipe.rotation = (pipe.rotation + 90) % 360;
+            clickCount++;
+            document.getElementById('click-count').textContent = clickCount;
+            renderGrid();
+        }
+
+        function calculateWaterFlow() {
+            const size = grid.length;
+            const visited = Array(size).fill().map(() => Array(size).fill(false));
+            const path = [];
+            
+            // 找到水源
+            let start = null;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (grid[y][x].type === 'source') {
+                        start = {x, y};
+                        break;
+                    }
+                }
+                if (start) break;
+            }
+            
+            if (!start) return path;
+            
+            // BFS遍历
+            const queue = [start];
+            visited[start.y][start.x] = true;
+            path.push(start);
+            
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                const neighbors = getConnectedNeighbors(curr.x, curr.y);
+                
+                for (const next of neighbors) {
+                    if (!visited[next.y][next.x]) {
+                        visited[next.y][next.x] = true;
+                        path.push(next);
+                        queue.push(next);
+                    }
+                }
+            }
+            
+            return path;
+        }
+
+        function getConnectedNeighbors(x, y) {
+            const size = grid.length;
+            const neighbors = [];
+            const directions = [
+                {dx: 0, dy: -1, from: 'top', to: 'bottom'},
+                {dx: 0, dy: 1, from: 'bottom', to: 'top'},
+                {dx: -1, dy: 0, from: 'left', to: 'right'},
+                {dx: 1, dy: 0, from: 'right', to: 'left'}
+            ];
+            
+            for (const dir of directions) {
+                const nx = x + dir.dx, ny = y + dir.dy;
+                if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                    if (isConnected(x, y, nx, ny, dir.from, dir.to)) {
+                        neighbors.push({x: nx, y: ny});
+                    }
+                }
+            }
+            
+            return neighbors;
+        }
+
+        function isConnected(x1, y1, x2, y2, from, to) {
+            const pipe1 = grid[y1][x1];
+            const pipe2 = grid[y2][x2];
+            
+            return hasOpening(pipe1, from) && hasOpening(pipe2, to);
+        }
+
+        function hasOpening(pipe, direction) {
+            const r = pipe.rotation;
+            
+            switch (pipe.type) {
+                case 'source':
+                    return true; // 水源可以向任何方向输出
+                case 'target':
+                    return true; // 目标可以接受任何方向
+                case 'straight':
+                    if (r % 180 === 0) return direction === 'left' || direction === 'right';
+                    return direction === 'top' || direction === 'bottom';
+                case 'curve':
+                    const curveDirs = {
+                        0: ['bottom', 'left'],    // top-right (default)
+                        90: ['top', 'left'],      // bottom-right
+                        180: ['top', 'right'],    // bottom-left
+                        270: ['bottom', 'right']  // top-left
+                    };
+                    return curveDirs[r].includes(direction);
+                case 'cross':
+                    return true;
+                case 'tee':
+                    const teeDirs = {
+                        0: ['top', 'left', 'right'],    // down
+                        90: ['top', 'bottom', 'left'],  // right
+                        180: ['bottom', 'left', 'right'], // up
+                        270: ['top', 'bottom', 'right']   // left
+                    };
+                    return teeDirs[r].includes(direction);
+                default:
+                    return false;
+            }
+        }
+
+        function showVictory() {
+            document.getElementById('victory-modal').classList.add('show');
+        }
+
+        function closeVictory() {
+            document.getElementById('victory-modal').classList.remove('show');
+        }
+
+        function nextLevel() {
+            closeVictory();
+            if (currentLevel < LEVELS.length - 1) {
+                loadLevel(currentLevel + 1);
+            } else {
+                showToast('恭喜！你已完成所有关卡！', 'success');
+                loadLevel(0);
+            }
+        }
+
+        function showLevelModal() {
+            generateLevelOptions();
+            document.getElementById('level-modal').classList.add('show');
+        }
+
+        function closeLevelModal() {
+            document.getElementById('level-modal').classList.remove('show');
+        }
+
+        function selectLevel(level) {
+            currentLevel = level;
+            document.querySelectorAll('.level-option').forEach((opt, idx) => {
+                opt.classList.toggle('selected', idx === level);
+            });
+        }
+
+        function startGame() {
+            closeLevelModal();
+            loadLevel(currentLevel);
+            showToast('🎮 新游戏开始！', 'success');
+        }
+
+        function showRules() {
+            document.getElementById('rules-modal').classList.add('show');
+        }
+
+        function closeRules() {
+            document.getElementById('rules-modal').classList.remove('show');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+
+        function toggleNav() {
+            document.getElementById('navMenu').classList.toggle('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-nav')) {
+                document.getElementById('navMenu').classList.remove('active');
+            }
+        });
+
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
+        init();
+    </script>
+</body>
+</html>

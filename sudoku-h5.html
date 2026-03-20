@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="精美数独游戏 - 支持笔记、提示、多种难度">
+    <title>数独 Master</title>
+    
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIuWvj+aWryBNYXN0ZXIiLCAic2hvcnRfbmFtZSI6ICLlr4/mlq8iLCAic3RhcnRfdXJsIjogIi4iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzYzNjZmMSIsICJ0aGVtZV9jb2xvciI6ICIjNjM2NmYxIn0=">
+    
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #a5b4fc;
+            --secondary: #f472b6;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --error: #f87171;
+            --bg-dark: #1e1b4b;
+            --bg-card: #312e81;
+            --text-primary: #ffffff;
+            --text-secondary: #c7d2fe;
+            --border: #4338ca;
+            --shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #3730a3 0%, #4f46e5 30%, #7c3aed 70%, #6366f1 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        /* 背景装饰 */
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(circle, rgba(167, 139, 250, 0.4) 0%, transparent 60%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(244, 114, 182, 0.3) 0%, transparent 50%);
+            animation: pulse 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        /* 顶部栏 */
+        .header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            padding-top: max(8px, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.1rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .difficulty-badge {
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 16px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #4f46e5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 统计栏 - 压缩版本 */
+        .stats-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 6px 16px;
+            flex-shrink: 0;
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-value.time {
+            color: var(--primary-light);
+        }
+
+        .stat-value.remaining {
+            color: var(--secondary);
+        }
+
+        /* 游戏区域 */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 6px 16px;
+            min-height: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 60px rgba(99, 102, 241, 0.3);
+            width: 100%;
+            max-width: min(92vw, 380px);
+            aspect-ratio: 1;
+            position: relative;
+        }
+
+        .grid-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #818cf8 100%);
+            border-radius: 18px;
+            z-index: -1;
+            opacity: 0.8;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            gap: 1px;
+            background: rgba(51, 65, 85, 0.8);
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .cell {
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1.4rem, 6vw, 2.2rem);
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            position: relative;
+            color: #1e293b;
+        }
+
+        .cell::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .cell:active {
+            transform: scale(0.92);
+            background: #e0e7ff;
+        }
+
+        .cell.selected {
+            background: linear-gradient(145deg, #c7d2fe 0%, #a5b4fc 100%);
+            box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .cell.selected::after {
+            opacity: 1;
+        }
+
+        .cell.fixed {
+            color: #0f172a;
+            font-weight: 500;
+            background: #e2e8f0;
+        }
+
+        .cell.user-input {
+            color: #0891b2;
+            font-weight: 500;
+        }
+
+        /* 被选数高亮 - 明亮紫色背景 */
+        .cell.same-number {
+            background: #f5f3ff !important;
+            color: #7c3aed;
+            font-weight: 600;
+        }
+
+        /* 笔记模式下完全不高亮被选数 */
+        .cell.same-number.notes-active {
+            color: inherit;
+            font-weight: inherit;
+        }
+
+        .cell.error {
+            background: #fee2e2 !important;
+            color: #dc2626 !important;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        .cell.highlight {
+            background: #e0e7ff;
+        }
+
+        /* 数字按钮唯余法提示 - 高亮唯一数字 */
+        .num-btn.unique-number {
+            background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%) !important;
+            border-color: #f59e0b !important;
+            color: #b45309 !important;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+            animation: numPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes numPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4); }
+            50% { transform: scale(1.08); box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6); }
+        }
+
+        /* 笔记模式下，数字按钮已选状态（当前格子已有该笔记） */
+        .num-btn.note-selected {
+            border: 3px solid #ef4444 !important;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .cell.notes-mode {
+            background: #f0f9ff !important;
+            box-shadow: inset 0 0 0 2px #60a5fa, 0 0 0 2px #93c5fd;
+            position: relative;
+        }
+
+        .cell.notes-mode::after {
+            content: '📝';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 0.6rem;
+            opacity: 0.5;
+        }
+
+        /* 提示高亮动画 */
+        .cell.hint-highlight {
+            animation: hintPulse 1.5s ease-in-out 2;
+        }
+
+        @keyframes hintPulse {
+            0%, 100% { 
+                background: #fef3c7;
+                box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0);
+            }
+            50% { 
+                background: #fde68a;
+                box-shadow: inset 0 0 20px rgba(251, 191, 36, 0.5);
+            }
+        }
+
+        /* 3x3 区块边框 */
+        .cell:nth-child(3n):not(:nth-child(9n)) {
+            border-right: 2px solid #6366f1;
+        }
+
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid #6366f1;
+        }
+
+        /* 笔记显示 */
+        .cell .notes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            font-size: clamp(0.4rem, 1.8vw, 0.55rem);
+            gap: 1px;
+            padding: 2px;
+        }
+
+        .cell .notes span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-weight: 400;
+            border-radius: 2px;
+        }
+
+        .cell .notes span.has-note {
+            color: #10b981;
+            font-weight: 500;
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            flex-shrink: 0;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .tool-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tool-btn-new {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+        }
+
+        .tool-btn-new:active {
+            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+        }
+
+        .tool-btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #4f46e5;
+            border: 1px solid #c7d2fe;
+        }
+
+        .tool-btn-secondary:active {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .tool-btn-secondary.active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-color: #10b981;
+        }
+
+        /* 数字键盘 - 两排布局 */
+        .number-pad {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 12px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 2px solid rgba(99, 102, 241, 0.3);
+            flex-shrink: 0;
+        }
+
+        .number-pad-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .num-btn {
+            flex: 1;
+            max-width: 56px;
+            min-width: 40px;
+            height: 58px;
+            font-size: 1.6rem;
+            font-weight: 600;
+            background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+            color: #4f46e5;
+            border: 2px solid #c7d2fe;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+            padding: 2px;
+        }
+
+        .num-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .num-btn:active::before {
+            width: 100%;
+            height: 100%;
+        }
+
+        .num-btn:active {
+            transform: scale(0.92);
+            border-color: #6366f1;
+            background: linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 100%);
+        }
+
+        .num-btn.notes-active {
+            background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+            color: #0369a1;
+            border-color: #7dd3fc;
+            box-shadow: 0 4px 16px rgba(14, 165, 233, 0.2);
+        }
+
+        .num-btn.erase {
+            background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
+            color: #dc2626;
+            border-color: #fca5a5;
+            font-size: 1.2rem;
+        }
+
+        .num-btn.erase:active {
+            background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .num-btn .remaining-count {
+            font-size: 0.55rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-top: -2px;
+            line-height: 1;
+        }
+
+        .num-btn.notes-active .remaining-count {
+            color: #6ee7b7;
+        }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 24px;
+            padding: 28px;
+            width: 100%;
+            max-width: 340px;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 60px rgba(99, 102, 241, 0.3);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal h2 {
+            color: #1e293b;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .difficulty-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .difficulty-option {
+            padding: 16px 20px;
+            background: rgba(241, 245, 249, 0.8);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .difficulty-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #6366f1 0%, #ec4899 100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .difficulty-option:hover {
+            background: rgba(224, 231, 255, 0.8);
+            transform: translateX(4px);
+        }
+
+        .difficulty-option.selected {
+            background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+            border-color: #6366f1;
+        }
+
+        .difficulty-option.selected::before {
+            opacity: 1;
+        }
+
+        .difficulty-option .label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .difficulty-option .desc {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
+        }
+
+        .modal-btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(241, 245, 249, 0.8);
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal-btn-secondary:active {
+            background: rgba(226, 232, 240, 0.8);
+        }
+
+        /* 胜利弹窗 */
+        .victory-modal {
+            text-align: center;
+        }
+
+        .victory-icon {
+            font-size: 5rem;
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .victory-time {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 16px 0;
+        }
+
+        .victory-modal p {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        /* Toast 消息 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.98);
+            color: #1e293b;
+            padding: 16px 28px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2000;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .toast.success {
+            border-color: #10b981;
+            background: rgba(236, 253, 245, 0.98);
+            color: #059669;
+        }
+
+        .toast.error {
+            border-color: #ef4444;
+            background: rgba(254, 242, 242, 0.98);
+            color: #dc2626;
+        }
+
+        /* 横屏优化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 6px 12px;
+            }
+            
+            .logo-text {
+                font-size: 1rem;
+            }
+            
+            .stats-bar {
+                padding: 4px 10px;
+                gap: 12px;
+            }
+            
+            .stat-card {
+                padding: 3px 10px;
+            }
+
+            .stat-value {
+                font-size: 0.9rem;
+            }
+            
+            .toolbar {
+                padding: 4px 8px;
+            }
+
+            .tool-btn {
+                padding: 5px 8px;
+                font-size: 0.7rem;
+            }
+            
+            .number-pad {
+                padding: 6px 10px;
+                gap: 4px;
+            }
+
+            .number-pad-row {
+                gap: 4px;
+            }
+            
+            .num-btn {
+                height: 44px;
+                max-width: 48px;
+                font-size: 1.3rem;
+                border-radius: 10px;
+            }
+
+            .num-btn .remaining-count {
+                font-size: 0.5rem;
+            }
+        }
+
+        /* 添加菜单按钮 */
+        .menu-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .menu-btn span {
+            width: 16px;
+            height: 2px;
+            background: #4f46e5;
+            border-radius: 1px;
+        }
+
+        .game-switcher {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+            transition: transform 0.2s;
+            z-index: 20;
+        }
+
+        .game-switcher:active {
+            transform: scale(0.92);
+        }
+
+        .switcher-menu {
+            position: absolute;
+            top: 56px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+            min-width: 160px;
+        }
+
+        .switcher-menu.show {
+            display: block;
+        }
+
+        .switcher-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .switcher-item:hover {
+            background: #f3f4f6;
+        }
+
+        .switcher-item.active {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            color: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="bg-decoration"></div>
+
+    <!-- 顶部栏 -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🧩</div>
+            <div class="logo-text">数独 Master</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="game-switcher" onclick="toggleSwitcher()" title="切换游戏">🎮</div>
+            <span class="difficulty-badge" id="difficulty-badge">困难</span>
+            <div class="menu-btn" onclick="showNewGameModal()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="switcher-menu" id="switcher-menu">
+        <a href="index.html" class="switcher-item active">
+            <span>🧩</span> 数独 Master
+        </a>
+        <a href="number-maze.html" class="switcher-item">
+            <span>🔢</span> 数字迷宫
+        </a>
+        <a href="skyscraper.html" class="switcher-item">
+            <span>🏢</span> 摩天楼
+        </a>
+    </div>
+
+    <!-- 统计栏 - 压缩版本 -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">⏱️</span>
+            <span class="stat-value time" id="timer">00:00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">🔢</span>
+            <span class="stat-value remaining" id="remaining">81</span>
+        </div>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="game-area">
+        <div class="grid-container">
+            <div class="sudoku-grid" id="grid"></div>
+        </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="toolbar">
+        <button class="tool-btn tool-btn-new" onclick="showNewGameModal()">
+            <span>🎮</span> 新游戏
+        </button>
+        <button class="tool-btn tool-btn-secondary" id="notes-btn" onclick="toggleNotesMode()">
+            <span>📝</span> 笔记
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="undo()">
+            <span>↩️</span> 撤销
+        </button>
+        <button class="tool-btn tool-btn-secondary" onclick="getHint()">
+            <span>💡</span> 提示
+        </button>
+    </div>
+
+    <!-- 数字键盘 - 两排布局 -->
+    <div class="number-pad">
+        <div class="number-pad-row">
+            <button class="num-btn" data-num="1" onclick="inputNumber(1)">1<span class="remaining-count" id="remaining-1"></span></button>
+            <button class="num-btn" data-num="2" onclick="inputNumber(2)">2<span class="remaining-count" id="remaining-2"></span></button>
+            <button class="num-btn" data-num="3" onclick="inputNumber(3)">3<span class="remaining-count" id="remaining-3"></span></button>
+            <button class="num-btn" data-num="4" onclick="inputNumber(4)">4<span class="remaining-count" id="remaining-4"></span></button>
+            <button class="num-btn" data-num="5" onclick="inputNumber(5)">5<span class="remaining-count" id="remaining-5"></span></button>
+        </div>
+        <div class="number-pad-row">
+            <button class="num-btn" data-num="6" onclick="inputNumber(6)">6<span class="remaining-count" id="remaining-6"></span></button>
+            <button class="num-btn" data-num="7" onclick="inputNumber(7)">7<span class="remaining-count" id="remaining-7"></span></button>
+            <button class="num-btn" data-num="8" onclick="inputNumber(8)">8<span class="remaining-count" id="remaining-8"></span></button>
+            <button class="num-btn" data-num="9" onclick="inputNumber(9)">9<span class="remaining-count" id="remaining-9"></span></button>
+            <button class="num-btn erase" onclick="inputNumber(0)">⌫</button>
+        </div>
+    </div>
+
+    <!-- 难度选择弹窗 -->
+    <div class="modal-overlay" id="newgame-modal">
+        <div class="modal">
+            <h2>选择难度</h2>
+            <div class="difficulty-options">
+                <div class="difficulty-option selected" data-level="easy" onclick="selectDifficulty('easy')">
+                    <span class="label">🌱 简单</span>
+                    <span class="desc">35个空格，适合初学者</span>
+                </div>
+                <div class="difficulty-option" data-level="medium" onclick="selectDifficulty('medium')">
+                    <span class="label">🌿 中等</span>
+                    <span class="desc">45个空格，有点挑战性</span>
+                </div>
+                <div class="difficulty-option" data-level="hard" onclick="selectDifficulty('hard')">
+                    <span class="label">🌳 困难</span>
+                    <span class="desc">55个空格，专家级别</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="startNewGame()">开始游戏</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal victory-modal">
+            <div class="victory-icon">🎉</div>
+            <h2>恭喜完成！</h2>
+            <div class="victory-time" id="victory-time">00:00</div>
+            <p>太棒了！你解决了这个数独谜题！</p>
+            <div class="modal-actions" style="margin-top: 24px;">
+                <button class="modal-btn modal-btn-primary" onclick="closeVictory(); showNewGameModal()">再玩一局</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示消息 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 游戏状态
+        let grid = [];
+        let solution = [];
+        let fixedCells = [];
+        let selectedCell = null;
+        let difficulty = 'hard';
+        let timerInterval;
+        let seconds = 0;
+        let notesMode = false;
+        let notes = Array(81).fill().map(() => new Set());
+        let history = [];
+        let selectedDifficulty = 'hard';
+        let hintCell = null;
+
+        // 初始化
+        function init() {
+            createGrid();
+            newGame();
+            setupTouch();
+            setupKeyboard();
+            setupLongPress();
+        }
+
+        // 创建网格
+        function createGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            
+            for (let i = 0; i < 81; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => selectCell(i));
+                gridElement.appendChild(cell);
+            }
+        }
+
+        // 触摸支持
+        function setupTouch() {
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.closest('.sudoku-grid')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        // 长按支持
+        function setupLongPress() {
+            let longPressTimer;
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach((cell, idx) => {
+                cell.addEventListener('touchstart', (e) => {
+                    longPressTimer = setTimeout(() => {
+                        selectCell(idx);
+                        if (!notesMode) {
+                            toggleNotesMode();
+                            showToast('📝 笔记模式已开启', 'success');
+                        }
+                    }, 500);
+                }, { passive: true });
+                
+                cell.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                cell.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+            });
+        }
+
+        // 新游戏
+        function newGame() {
+            clearInterval(timerInterval);
+            seconds = 0;
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            solution = generateSolution();
+            grid = createPuzzle(solution, difficulty);
+            fixedCells = grid.map((val, idx) => val !== 0);
+            
+            notes = Array(81).fill().map(() => new Set());
+            history = [];
+            notesMode = false;
+            hintCell = null;
+            updateNotesButton();
+            updateNumberPad();
+            
+            renderGrid();
+            updateRemaining();
+            updateNumberRemaining();
+            selectedCell = null;
+        }
+
+        // 生成完整解答
+        function generateSolution() {
+            const board = Array(9).fill().map(() => Array(9).fill(0));
+            fillBoard(board);
+            return board.flat();
+        }
+
+        // 填充数独板
+        function fillBoard(board) {
+            const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] === 0) {
+                        shuffleArray(nums);
+                        for (let num of nums) {
+                            if (isValid(board, row, col, num)) {
+                                board[row][col] = num;
+                                if (fillBoard(board)) return true;
+                                board[row][col] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // 打乱数组
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // 验证数字是否有效
+        function isValid(board, row, col, num) {
+            for (let x = 0; x < 9; x++) {
+                if (board[row][x] === num) return false;
+            }
+            
+            for (let x = 0; x < 9; x++) {
+                if (board[x][col] === num) return false;
+            }
+            
+            const startRow = row - row % 3;
+            const startCol = col - col % 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (board[i + startRow][j + startCol] === num) return false;
+                }
+            }
+            
+            return true;
+        }
+
+        // 创建谜题
+        function createPuzzle(solution, level) {
+            const puzzle = [...solution];
+            let cellsToRemove;
+            
+            switch (level) {
+                case 'easy': cellsToRemove = 35; break;
+                case 'medium': cellsToRemove = 45; break;
+                case 'hard': cellsToRemove = 55; break;
+                case 'expert': cellsToRemove = 62; break;
+                default: cellsToRemove = 55;
+            }
+            
+            const positions = Array.from({length: 81}, (_, i) => i);
+            shuffleArray(positions);
+            
+            for (let i = 0; i < cellsToRemove; i++) {
+                puzzle[positions[i]] = 0;
+            }
+            
+            return puzzle;
+        }
+
+        // 渲染网格
+        function renderGrid() {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach((cell, idx) => {
+                const value = grid[idx];
+                const isFixed = fixedCells[idx];
+                const cellNotes = notes[idx];
+                
+                cell.className = 'cell';
+                cell.innerHTML = '';
+                
+                // 提示高亮
+                if (idx === hintCell) {
+                    cell.classList.add('hint-highlight');
+                }
+                
+                if (idx === selectedCell && notesMode && !isFixed) {
+                    cell.classList.add('notes-mode');
+                }
+                
+                if (value !== 0) {
+                    cell.textContent = value;
+                    if (isFixed) {
+                        cell.classList.add('fixed');
+                    } else {
+                        cell.classList.add('user-input');
+                    }
+                } else if (cellNotes.size > 0) {
+                    const notesDiv = document.createElement('div');
+                    notesDiv.className = 'notes';
+                    for (let i = 1; i <= 9; i++) {
+                        const span = document.createElement('span');
+                        if (cellNotes.has(i)) {
+                            span.textContent = i;
+                            span.classList.add('has-note');
+                        }
+                        notesDiv.appendChild(span);
+                    }
+                    cell.appendChild(notesDiv);
+                }
+            });
+            
+            highlightCells();
+            markErrors();
+            updateNumberPadHighlight();
+        }
+
+        // 选择单元格
+        function selectCell(idx) {
+            selectedCell = idx;
+            renderGrid();
+        }
+
+        // 检查指定格子所在行、列、宫是否是唯余（只剩这个空位）
+        function findUniqueNumberForCell(cellIdx) {
+            if (cellIdx === null || grid[cellIdx] !== 0) return null;
+            
+            const row = Math.floor(cellIdx / 9);
+            const col = cellIdx % 9;
+            const boxRow = Math.floor(row / 3);
+            const boxCol = Math.floor(col / 3);
+            
+            // 检查所在行
+            const rowEmptyCells = [];
+            const rowNums = new Set();
+            for (let c = 0; c < 9; c++) {
+                const idx = row * 9 + c;
+                if (grid[idx] === 0) rowEmptyCells.push(idx);
+                else rowNums.add(grid[idx]);
+            }
+            if (rowEmptyCells.length === 1 && rowEmptyCells[0] === cellIdx) {
+                for (let num = 1; num <= 9; num++) {
+                    if (!rowNums.has(num)) return num;
+                }
+            }
+            
+            // 检查所在列
+            const colEmptyCells = [];
+            const colNums = new Set();
+            for (let r = 0; r < 9; r++) {
+                const idx = r * 9 + col;
+                if (grid[idx] === 0) colEmptyCells.push(idx);
+                else colNums.add(grid[idx]);
+            }
+            if (colEmptyCells.length === 1 && colEmptyCells[0] === cellIdx) {
+                for (let num = 1; num <= 9; num++) {
+                    if (!colNums.has(num)) return num;
+                }
+            }
+            
+            // 检查所在宫
+            const boxEmptyCells = [];
+            const boxNums = new Set();
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const r = boxRow * 3 + i;
+                    const c = boxCol * 3 + j;
+                    const idx = r * 9 + c;
+                    if (grid[idx] === 0) boxEmptyCells.push(idx);
+                    else boxNums.add(grid[idx]);
+                }
+            }
+            if (boxEmptyCells.length === 1 && boxEmptyCells[0] === cellIdx) {
+                for (let num = 1; num <= 9; num++) {
+                    if (!boxNums.has(num)) return num;
+                }
+            }
+            
+            return null;
+        }
+
+        // 更新数字按钮唯余法提示和笔记选中状态
+        function updateNumberPadHighlight() {
+            try {
+                const uniqueNum = findUniqueNumberForCell(selectedCell);
+                const numBtns = document.querySelectorAll('.num-btn[data-num]');
+                
+                numBtns.forEach(btn => {
+                    const num = parseInt(btn.dataset.num);
+                    btn.classList.remove('unique-number', 'note-selected');
+                    
+                    // 唯余法高亮
+                    if (uniqueNum !== null && num === uniqueNum) {
+                        btn.classList.add('unique-number');
+                    }
+                    
+                    // 笔记模式下，当前格子已有该笔记则显示红框
+                    if (notesMode && selectedCell !== null && notes[selectedCell].has(num)) {
+                        btn.classList.add('note-selected');
+                    }
+                });
+            } catch (e) {
+                console.error('updateNumberPadHighlight error:', e);
+            }
+        }
+
+        // 高亮单元格
+        function highlightCells() {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach((cell, idx) => {
+                if (idx === selectedCell) {
+                    cell.classList.add('selected');
+                }
+                
+                if (selectedCell !== null) {
+                    const selectedRow = Math.floor(selectedCell / 9);
+                    const selectedCol = selectedCell % 9;
+                    const currentRow = Math.floor(idx / 9);
+                    const currentCol = idx % 9;
+                    
+                    // 计算宫的位置 (3x3区块)
+                    const selectedBoxRow = Math.floor(selectedRow / 3);
+                    const selectedBoxCol = Math.floor(selectedCol / 3);
+                    const currentBoxRow = Math.floor(currentRow / 3);
+                    const currentBoxCol = Math.floor(currentCol / 3);
+                    const isSameBox = selectedBoxRow === currentBoxRow && selectedBoxCol === currentBoxCol;
+                    
+                    // 高亮同行、同列、同宫
+                    if (currentRow === selectedRow || currentCol === selectedCol || isSameBox) {
+                        cell.classList.add('highlight');
+                    }
+                    
+                    // 被选数高亮（笔记模式下不高亮）
+                    if (grid[idx] !== 0 && grid[idx] === grid[selectedCell] && !notesMode) {
+                        cell.classList.add('same-number');
+                    }
+                }
+            });
+        }
+
+        // 标记错误
+        function markErrors() {
+            const cells = document.querySelectorAll('.cell');
+            
+            for (let i = 0; i < 81; i++) {
+                if (grid[i] !== 0 && !fixedCells[i]) {
+                    const row = Math.floor(i / 9);
+                    const col = i % 9;
+                    const board = Array(9).fill().map((_, r) => 
+                        Array(9).fill().map((_, c) => grid[r * 9 + c])
+                    );
+                    
+                    const temp = board[row][col];
+                    board[row][col] = 0;
+                    
+                    if (!isValid(board, row, col, temp)) {
+                        cells[i].classList.add('error');
+                    }
+                }
+            }
+        }
+
+        // 清除相关笔记 - 当填入数字时，清除同行、同列、同宫内的该数字笔记
+        function clearRelatedNotes(cellIdx, num) {
+            if (num === 0) return;
+            
+            const row = Math.floor(cellIdx / 9);
+            const col = cellIdx % 9;
+            const boxRow = Math.floor(row / 3);
+            const boxCol = Math.floor(col / 3);
+            
+            let cleared = false;
+            
+            for (let i = 0; i < 81; i++) {
+                const r = Math.floor(i / 9);
+                const c = i % 9;
+                const bRow = Math.floor(r / 3);
+                const bCol = Math.floor(c / 3);
+                
+                // 如果是同行、同列或同宫，且包含该数字的笔记
+                if ((r === row || c === col || (bRow === boxRow && bCol === boxCol)) && notes[i].has(num)) {
+                    notes[i].delete(num);
+                    cleared = true;
+                }
+            }
+            
+            return cleared;
+        }
+
+        // 输入数字
+        function inputNumber(num) {
+            if (selectedCell === null || fixedCells[selectedCell]) {
+                showToast('请选择空白格子', 'error');
+                return;
+            }
+            
+            history.push({
+                cell: selectedCell,
+                value: grid[selectedCell],
+                notes: new Set(notes[selectedCell])
+            });
+            if (history.length > 50) history.shift();
+            
+            if (notesMode && num !== 0) {
+                const cellNotes = notes[selectedCell];
+                if (cellNotes.has(num)) {
+                    cellNotes.delete(num);
+                } else {
+                    cellNotes.add(num);
+                }
+            } else {
+                grid[selectedCell] = num;
+                if (num !== 0) {
+                    notes[selectedCell].clear();
+                    // 清除相关笔记
+                    clearRelatedNotes(selectedCell, num);
+                }
+            }
+            
+            renderGrid();
+            updateRemaining();
+            updateNumberRemaining();
+            updateNumberPadHighlight(); // 确保数字按钮状态更新
+            
+            if (isComplete()) {
+                clearInterval(timerInterval);
+                showVictory();
+            }
+        }
+
+        // 撤销
+        function undo() {
+            if (history.length === 0) {
+                showToast('没有可撤销的操作', 'error');
+                return;
+            }
+            
+            const last = history.pop();
+            grid[last.cell] = last.value;
+            notes[last.cell] = last.notes;
+            selectedCell = last.cell;
+            renderGrid();
+            updateRemaining();
+            updateNumberRemaining();
+            showToast('已撤销', 'success');
+        }
+
+        // 检查是否完成
+        function isComplete() {
+            for (let i = 0; i < 81; i++) {
+                if (grid[i] === 0) return false;
+            }
+            return isValidSolution();
+        }
+
+        // 验证解答
+        function isValidSolution() {
+            for (let i = 0; i < 81; i++) {
+                const row = Math.floor(i / 9);
+                const col = i % 9;
+                const board = Array(9).fill().map((_, r) => 
+                    Array(9).fill().map((_, c) => {
+                        const idx = r * 9 + c;
+                        return idx === i ? 0 : grid[idx];
+                    })
+                );
+                
+                if (!isValid(board, row, col, grid[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // 更新剩余空格数
+        function updateRemaining() {
+            const remaining = grid.filter(v => v === 0).length;
+            document.getElementById('remaining').textContent = remaining;
+        }
+
+        // 更新每个数字的剩余可填数
+        function updateNumberRemaining() {
+            for (let num = 1; num <= 9; num++) {
+                const count = countRemainingForNumber(num);
+                const elem = document.getElementById(`remaining-${num}`);
+                if (elem) {
+                    if (count === 0) {
+                        elem.textContent = '';
+                    } else {
+                        elem.textContent = `剩${count}`;
+                    }
+                }
+            }
+        }
+
+        // 计算某个数字还差几个填满9个（数独规则：每行每列每宫各1-9）
+        function countRemainingForNumber(num) {
+            const currentCount = grid.filter(v => v === num).length;
+            return 9 - currentCount;
+        }
+
+        // 提示
+        function getHint() {
+            if (selectedCell === null || fixedCells[selectedCell] || grid[selectedCell] !== 0) {
+                const emptyCells = [];
+                for (let i = 0; i < 81; i++) {
+                    if (grid[i] === 0) {
+                        emptyCells.push(i);
+                    }
+                }
+                
+                if (emptyCells.length === 0) {
+                    showToast('已经完成！', 'success');
+                    return;
+                }
+                
+                selectedCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            }
+            
+            history.push({
+                cell: selectedCell,
+                value: grid[selectedCell],
+                notes: new Set(notes[selectedCell])
+            });
+            
+            grid[selectedCell] = solution[selectedCell];
+            notes[selectedCell].clear();
+            // 清除相关笔记
+            clearRelatedNotes(selectedCell, solution[selectedCell]);
+            
+            // 设置提示高亮
+            hintCell = selectedCell;
+            
+            renderGrid();
+            updateRemaining();
+            updateNumberRemaining();
+            showToast('💡 已填入提示', 'success');
+            
+            // 3秒后移除高亮
+            setTimeout(() => {
+                hintCell = null;
+                renderGrid();
+            }, 3000);
+        }
+
+        // 笔记模式
+        function toggleNotesMode() {
+            notesMode = !notesMode;
+            updateNotesButton();
+            updateNumberPad();
+            renderGrid();
+        }
+
+        function updateNotesButton() {
+            const btn = document.getElementById('notes-btn');
+            btn.classList.toggle('active', notesMode);
+            btn.innerHTML = notesMode ? '<span>✏️</span> 笔记中' : '<span>📝</span> 笔记';
+        }
+
+        function updateNumberPad() {
+            const numBtns = document.querySelectorAll('.num-btn:not(.erase)');
+            numBtns.forEach(btn => {
+                btn.classList.toggle('notes-active', notesMode);
+            });
+        }
+
+        // 键盘支持
+        function setupKeyboard() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'n' || e.key === 'N') {
+                    toggleNotesMode();
+                    return;
+                }
+                
+                if (selectedCell === null) return;
+                
+                if (e.key >= '1' && e.key <= '9') {
+                    inputNumber(parseInt(e.key));
+                } else if (e.key === '0' || e.key === 'Delete' || e.key === 'Backspace') {
+                    inputNumber(0);
+                } else if (e.key === 'ArrowUp' && selectedCell >= 9) {
+                    selectedCell -= 9;
+                    renderGrid();
+                } else if (e.key === 'ArrowDown' && selectedCell < 72) {
+                    selectedCell += 9;
+                    renderGrid();
+                } else if (e.key === 'ArrowLeft' && selectedCell % 9 !== 0) {
+                    selectedCell--;
+                    renderGrid();
+                } else if (e.key === 'ArrowRight' && selectedCell % 9 !== 8) {
+                    selectedCell++;
+                    renderGrid();
+                }
+            });
+        }
+
+        // 计时器
+        function updateTimer() {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }
+
+        // 弹窗控制
+        function showNewGameModal() {
+            document.getElementById('newgame-modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('newgame-modal').classList.remove('show');
+        }
+
+        function selectDifficulty(level) {
+            selectedDifficulty = level;
+            document.querySelectorAll('.difficulty-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.level === level);
+            });
+        }
+
+        function startNewGame() {
+            difficulty = selectedDifficulty;
+            const labels = { easy: '简单', medium: '中等', hard: '困难' };
+            document.getElementById('difficulty-badge').textContent = labels[difficulty];
+            closeModal();
+            newGame();
+            showToast('🎮 新游戏开始！', 'success');
+        }
+
+        // 胜利弹窗
+        function showVictory() {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('victory-time').textContent = `${mins}:${secs}`;
+            document.getElementById('victory-modal').classList.add('show');
+        }
+
+        function closeVictory() {
+            document.getElementById('victory-modal').classList.remove('show');
+        }
+
+        // 消息提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 切换游戏菜单
+        function toggleSwitcher() {
+            document.getElementById('switcher-menu').classList.toggle('show');
+        }
+
+        // 点击其他地方关闭菜单
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-switcher') && !e.target.closest('.switcher-menu')) {
+                document.getElementById('switcher-menu').classList.remove('show');
+            }
+        });
+
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>

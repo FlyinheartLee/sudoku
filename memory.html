@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f97316">
+    <title>记忆翻牌 - Memory Game</title>
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --primary-light: #ffedd5;
+            --secondary: #fb923c;
+            --accent: #fbbf24;
+            --bg-dark: #7c2d12;
+            --bg-card: #9a3412;
+            --text-primary: #ffffff;
+            --text-secondary: #fed7aa;
+            --success: #22c55e;
+            --card-back: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #7c2d12 0%, #9a3412 30%, #ea580c 70%, #f97316 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        .game-nav {
+            position: relative;
+            z-index: 100;
+        }
+
+        .nav-toggle {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 101;
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: max(60px, calc(env(safe-area-inset-top) + 50px));
+            right: 10px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+            z-index: 100;
+        }
+
+        .nav-menu.active {
+            display: flex;
+        }
+
+        .nav-menu a {
+            padding: 10px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #333;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .nav-menu a:hover {
+            background: var(--primary-light);
+        }
+
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(251, 146, 60, 0.4) 0%, transparent 60%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.3) 0%, transparent 50%);
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, -20px); }
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(249, 115, 22, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .theme-badge {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+
+        .stats-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px 16px;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 8px 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-value.timer {
+            color: #fbbf24;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            border: 2px solid rgba(249, 115, 22, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 40px rgba(249, 115, 22, 0.2);
+            position: relative;
+        }
+
+        .game-grid {
+            display: grid;
+            gap: 8px;
+            padding: 6px;
+        }
+
+        .card {
+            aspect-ratio: 1;
+            min-width: 60px;
+            min-height: 60px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched .card-front {
+            background: linear-gradient(145deg, #86efac 0%, #22c55e 100%);
+            animation: matchPulse 0.5s ease;
+        }
+
+        @keyframes matchPulse {
+            0%, 100% { transform: scale(1) rotateY(180deg); }
+            50% { transform: scale(1.1) rotateY(180deg); }
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-back {
+            background: var(--card-back);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .card-back::after {
+            content: '?';
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .card-front {
+            background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%);
+            border: 3px solid rgba(249, 115, 22, 0.3);
+            transform: rotateY(180deg);
+        }
+
+        .toolbar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 12px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .tool-btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+
+        .tool-btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .tool-btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary-dark);
+            border: 2px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #ffffff 0%, #fff7ed 100%);
+            border: 2px solid rgba(249, 115, 22, 0.2);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 320px;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal h2 {
+            color: #9a3412;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .theme-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .theme-option {
+            padding: 12px 16px;
+            background: rgba(255, 237, 213, 0.5);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-option:hover {
+            background: rgba(249, 115, 22, 0.1);
+            transform: translateX(4px);
+        }
+
+        .theme-option.selected {
+            background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+            border-color: #f97316;
+        }
+
+        .theme-option .label {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #9a3412;
+            display: block;
+        }
+
+        .grid-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .grid-option {
+            padding: 12px;
+            background: rgba(255, 237, 213, 0.5);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .grid-option:hover {
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        .grid-option.selected {
+            background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+            border-color: #f97316;
+        }
+
+        .grid-option .label {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #9a3412;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(255, 237, 213, 0.5);
+            color: #9a3412;
+            border: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        .victory-modal {
+            text-align: center;
+        }
+
+        .victory-icon {
+            font-size: 4rem;
+            margin-bottom: 12px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .final-stats {
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f97316, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 8px 0;
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.98);
+            color: #9a3412;
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 2000;
+            border: 2px solid rgba(249, 115, 22, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-nav">
+        <button class="nav-toggle" onclick="toggleNav()">🎮</button>
+        <div class="nav-menu" id="navMenu">
+            <a href="sudoku-h5.html">🧩 数独</a>
+            <a href="number-maze.html">🔢 数字迷宫</a>
+            <a href="skyscraper.html">🏢 摩天楼</a>
+            <a href="game2048.html">🔢 2048</a>
+            <a href="klotski.html">🧩 华容道</a>
+            <a href="minesweeper.html">💣 扫雷</a>
+            <a href="pipe.html">🔧 接水管</a>
+            <a href="memory.html">🃏 记忆翻牌</a>
+            <a href="sokoban.html">📦 推箱子</a>
+            <a href="hashi.html">🌉 数桥</a>
+        </div>
+    </div>
+
+    <div class="bg-decoration"></div>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🃏</div>
+            <div class="logo-text">记忆翻牌</div>
+        </div>
+        <div class="theme-badge" id="theme-badge">Emoji</div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">⏱️ 时间</span>
+            <span class="stat-value timer" id="timer">00:00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">🔄 步数</span>
+            <span class="stat-value" id="moves">0</span>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="grid-container">
+            <div class="game-grid" id="grid"></div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button class="tool-btn tool-btn-secondary" onclick="showSettingsModal()">
+            <span>⚙️</span> 设置
+        </button>
+        <button class="tool-btn tool-btn-primary" onclick="newGame()">
+            <span>🎮</span> 新游戏
+        </button>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <h2>游戏设置</h2>
+            <div class="theme-options">
+                <div class="theme-option selected" data-theme="emoji" onclick="selectTheme('emoji')">
+                    <span class="label">😀 Emoji表情</span>
+                </div>
+                <div class="theme-option" data-theme="number" onclick="selectTheme('number')">
+                    <span class="label">🔢 数字</span>
+                </div>
+                <div class="theme-option" data-theme="letter" onclick="selectTheme('letter')">
+                    <span class="label">🔤 字母</span>
+                </div>
+            </div>
+            <div class="grid-options">
+                <div class="grid-option selected" data-grid="4x4" onclick="selectGrid('4x4')">
+                    <span class="label">4×4</span>
+                </div>
+                <div class="grid-option" data-grid="4x5" onclick="selectGrid('4x5')">
+                    <span class="label">4×5</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeSettingsModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="applySettings()">应用</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal victory-modal">
+            <div class="victory-icon">🎉</div>
+            <h2>恭喜完成！</h2>
+            <div class="final-stats">
+                <div>时间: <span id="victory-time">00:00</span></div>
+                <div>步数: <span id="victory-moves">0</span></div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="modal-btn modal-btn-primary" onclick="closeVictory(); newGame()">再玩一次</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 主题数据
+        const THEMES = {
+            emoji: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆'],
+            number: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'],
+            letter: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
+        };
+
+        let currentTheme = 'emoji';
+        let gridSize = { cols: 4, rows: 4 };
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let seconds = 0;
+        let timerInterval = null;
+        let canFlip = true;
+
+        function init() {
+            newGame();
+        }
+
+        function newGame() {
+            // 重置状态
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            seconds = 0;
+            canFlip = true;
+            
+            clearInterval(timerInterval);
+            updateTimer();
+            updateMoves();
+            
+            // 生成卡片
+            generateCards();
+            renderGrid();
+        }
+
+        function generateCards() {
+            const totalCards = gridSize.cols * gridSize.rows;
+            const pairsNeeded = totalCards / 2;
+            
+            // 获取随机符号
+            const symbols = THEMES[currentTheme].slice(0, pairsNeeded);
+            
+            // 创建卡片对
+            const cardData = [];
+            symbols.forEach((symbol, idx) => {
+                cardData.push({ id: idx, symbol, isMatched: false });
+                cardData.push({ id: idx, symbol, isMatched: false });
+            });
+            
+            // 打乱
+            cards = shuffleArray(cardData);
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${gridSize.cols}, 1fr)`;
+            
+            cards.forEach((card, idx) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card' + (card.isFlipped ? ' flipped' : '') + (card.isMatched ? ' matched' : '');
+                cardEl.dataset.index = idx;
+                cardEl.onclick = () => onCardClick(idx);
+                
+                cardEl.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">${card.symbol}</div>
+                        <div class="card-back"></div>
+                    </div>
+                `;
+                
+                gridEl.appendChild(cardEl);
+            });
+        }
+
+        function onCardClick(idx) {
+            if (!canFlip) return;
+            if (cards[idx].isMatched) return;
+            if (cards[idx].isFlipped) return;
+            
+            // 开始计时
+            if (!timerInterval) {
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    updateTimer();
+                }, 1000);
+            }
+            
+            // 翻开卡片
+            cards[idx].isFlipped = true;
+            flippedCards.push(idx);
+            renderGrid();
+            
+            // 检查是否翻开了两张
+            if (flippedCards.length === 2) {
+                moves++;
+                updateMoves();
+                canFlip = false;
+                
+                const [idx1, idx2] = flippedCards;
+                const card1 = cards[idx1];
+                const card2 = cards[idx2];
+                
+                if (card1.id === card2.id) {
+                    // 匹配成功
+                    setTimeout(() => {
+                        card1.isMatched = true;
+                        card2.isMatched = true;
+                        matchedPairs++;
+                        flippedCards = [];
+                        canFlip = true;
+                        renderGrid();
+                        
+                        // 检查胜利
+                        if (matchedPairs === cards.length / 2) {
+                            clearInterval(timerInterval);
+                            setTimeout(showVictory, 500);
+                        }
+                    }, 500);
+                } else {
+                    // 匹配失败
+                    setTimeout(() => {
+                        card1.isFlipped = false;
+                        card2.isFlipped = false;
+                        flippedCards = [];
+                        canFlip = true;
+                        renderGrid();
+                    }, 1000);
+                }
+            }
+        }
+
+        function updateTimer() {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }
+
+        function updateMoves() {
+            document.getElementById('moves').textContent = moves;
+        }
+
+        function showSettingsModal() {
+            document.getElementById('settings-modal').classList.add('show');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('show');
+        }
+
+        function selectTheme(theme) {
+            currentTheme = theme;
+            document.querySelectorAll('.theme-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.theme === theme);
+            });
+            document.getElementById('theme-badge').textContent = 
+                theme === 'emoji' ? 'Emoji' : theme === 'number' ? '数字' : '字母';
+        }
+
+        function selectGrid(grid) {
+            if (grid === '4x4') {
+                gridSize = { cols: 4, rows: 4 };
+            } else {
+                gridSize = { cols: 4, rows: 5 };
+            }
+            document.querySelectorAll('.grid-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.grid === grid);
+            });
+        }
+
+        function applySettings() {
+            closeSettingsModal();
+            newGame();
+            showToast('设置已应用', 'success');
+        }
+
+        function showVictory() {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('victory-time').textContent = `${mins}:${secs}`;
+            document.getElementById('victory-moves').textContent = moves;
+            document.getElementById('victory-modal').classList.add('show');
+        }
+
+        function closeVictory() {
+            document.getElementById('victory-modal').classList.remove('show');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+
+        function toggleNav() {
+            document.getElementById('navMenu').classList.toggle('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-nav')) {
+                document.getElementById('navMenu').classList.remove('active');
+            }
+        });
+
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
+        init();
+    </script>
+</body>
+</html>
