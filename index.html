@@ -1344,22 +1344,10 @@
             }
         }
 
-        // 计算某个数字还剩多少位置可填
+        // 计算某个数字还差几个填满9个（数独规则：每行每列每宫各1-9）
         function countRemainingForNumber(num) {
-            let count = 0;
-            for (let i = 0; i < 81; i++) {
-                if (grid[i] === 0) {
-                    const row = Math.floor(i / 9);
-                    const col = i % 9;
-                    const board = Array(9).fill().map((_, r) => 
-                        Array(9).fill().map((_, c) => grid[r * 9 + c])
-                    );
-                    if (isValid(board, row, col, num)) {
-                        count++;
-                    }
-                }
-            }
-            return count;
+            const currentCount = grid.filter(v => v === num).length;
+            return 9 - currentCount;
         }
 
         // 提示
@@ -1510,6 +1498,24 @@
             
             setTimeout(() => {
                 toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>ssList.remove('show');
             }, 2000);
         }
 
