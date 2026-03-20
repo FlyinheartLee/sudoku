@@ -290,14 +290,27 @@
         }
 
         .cell.fixed {
-            color: #1e293b;
+            color: #0f172a;
             font-weight: 500;
             background: #e2e8f0;
         }
 
         .cell.user-input {
-            color: #4f46e5;
-            font-weight: 400;
+            color: #0891b2;
+            font-weight: 500;
+        }
+
+        /* 被选数高亮 - 用紫色区分 */
+        .cell.same-number {
+            color: #7c3aed;
+            font-weight: 600;
+            background: inherit;
+        }
+
+        /* 笔记模式下完全不高亮被选数 */
+        .cell.same-number.notes-active {
+            color: inherit;
+            font-weight: inherit;
         }
 
         .cell.error {
@@ -316,28 +329,21 @@
             background: rgba(224, 231, 255, 0.5);
         }
 
-        /* 被选数微弱高亮 - 仅文字颜色变化 */
-        .cell.same-number {
-            color: #6366f1;
-            font-weight: 600;
-            background: inherit;
+        /* 数字按钮唯余法提示 - 其他数字变灰 */
+        .num-btn.dimmed {
+            opacity: 0.3;
+            filter: grayscale(100%);
         }
 
-        /* 笔记模式下完全不高亮被选数 */
-        .cell.same-number.notes-active {
-            color: inherit;
-            font-weight: inherit;
+        .num-btn.unique-number {
+            animation: numPulse 1.5s ease-in-out infinite;
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
         }
 
-        /* 唯一候选数高亮 - 只剩一个可填位置时的提示 */
-        .cell.unique-hint {
-            background: #fef3c7 !important;
-            animation: uniquePulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes uniquePulse {
-            0%, 100% { background: #fef3c7; }
-            50% { background: #fde68a; }
+        @keyframes numPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .cell.notes-mode {
@@ -1178,6 +1184,7 @@
             
             highlightCells();
             markErrors();
+            updateNumberPadHighlight();
         }
 
         // 选择单元格
@@ -1186,62 +1193,101 @@
             renderGrid();
         }
 
-        // 检查某行、列、宫中是否有唯一的空位
-        function findUniqueEmptyCell() {
+        // 检查某行、列、宫中唯一空位应该填什么数字（唯余法）
+        function findUniqueNumberForLine() {
             // 检查行
             for (let row = 0; row < 9; row++) {
                 const emptyCells = [];
+                const existingNums = new Set();
                 for (let col = 0; col < 9; col++) {
                     const idx = row * 9 + col;
-                    if (grid[idx] === 0) emptyCells.push(idx);
+                    if (grid[idx] === 0) {
+                        emptyCells.push(idx);
+                    } else {
+                        existingNums.add(grid[idx]);
+                    }
                 }
-                if (emptyCells.length === 1) return emptyCells[0];
+                if (emptyCells.length === 1) {
+                    // 找到该行缺失的数字
+                    for (let num = 1; num <= 9; num++) {
+                        if (!existingNums.has(num)) return num;
+                    }
+                }
             }
             
             // 检查列
             for (let col = 0; col < 9; col++) {
                 const emptyCells = [];
+                const existingNums = new Set();
                 for (let row = 0; row < 9; row++) {
                     const idx = row * 9 + col;
-                    if (grid[idx] === 0) emptyCells.push(idx);
+                    if (grid[idx] === 0) {
+                        emptyCells.push(idx);
+                    } else {
+                        existingNums.add(grid[idx]);
+                    }
                 }
-                if (emptyCells.length === 1) return emptyCells[0];
+                if (emptyCells.length === 1) {
+                    for (let num = 1; num <= 9; num++) {
+                        if (!existingNums.has(num)) return num;
+                    }
+                }
             }
             
             // 检查宫
             for (let boxRow = 0; boxRow < 3; boxRow++) {
                 for (let boxCol = 0; boxCol < 3; boxCol++) {
                     const emptyCells = [];
+                    const existingNums = new Set();
                     for (let i = 0; i < 3; i++) {
                         for (let j = 0; j < 3; j++) {
                             const row = boxRow * 3 + i;
                             const col = boxCol * 3 + j;
                             const idx = row * 9 + col;
-                            if (grid[idx] === 0) emptyCells.push(idx);
+                            if (grid[idx] === 0) {
+                                emptyCells.push(idx);
+                            } else {
+                                existingNums.add(grid[idx]);
+                            }
                         }
                     }
-                    if (emptyCells.length === 1) return emptyCells[0];
+                    if (emptyCells.length === 1) {
+                        for (let num = 1; num <= 9; num++) {
+                            if (!existingNums.has(num)) return num;
+                        }
+                    }
                 }
             }
             
             return null;
         }
 
+        // 更新数字按钮唯余法提示
+        function updateNumberPadHighlight() {
+            const uniqueNum = findUniqueNumberForLine();
+            const numBtns = document.querySelectorAll('.num-btn[data-num]');
+            
+            numBtns.forEach(btn => {
+                const num = parseInt(btn.dataset.num);
+                btn.classList.remove('dimmed', 'unique-number');
+                
+                if (uniqueNum !== null) {
+                    if (num !== uniqueNum) {
+                        btn.classList.add('dimmed');
+                    } else {
+                        btn.classList.add('unique-number');
+                    }
+                }
+            });
+        }
+
         // 高亮单元格
         function highlightCells() {
             const cells = document.querySelectorAll('.cell');
             
-            // 检查是否有唯一空位（唯余法）
-            const uniqueCell = findUniqueEmptyCell();
-            
             cells.forEach((cell, idx) => {
                 if (idx === selectedCell) {
                     cell.classList.add('selected');
-                }
-                
-                // 唯余法提示：只剩一个空位的行/列/宫
-                if (idx === uniqueCell) {
-                    cell.classList.add('unique-hint');
                 }
                 
                 if (selectedCell !== null) {
