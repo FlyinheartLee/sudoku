@@ -329,21 +329,18 @@
             background: #e0e7ff;
         }
 
-        /* 数字按钮唯余法提示 - 其他数字变灰 */
-        .num-btn.dimmed {
-            opacity: 0.3;
-            filter: grayscale(100%);
-        }
-
+        /* 数字按钮唯余法提示 - 高亮唯一数字 */
         .num-btn.unique-number {
+            background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%) !important;
+            border-color: #f59e0b !important;
+            color: #b45309 !important;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
             animation: numPulse 1.5s ease-in-out infinite;
-            border-color: #f59e0b;
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
         }
 
         @keyframes numPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4); }
+            50% { transform: scale(1.08); box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6); }
         }
 
         .cell.notes-mode {
@@ -1270,15 +1267,10 @@
                 
                 numBtns.forEach(btn => {
                     const num = parseInt(btn.dataset.num);
-                    btn.classList.remove('dimmed', 'unique-number');
-                    btn.style.pointerEvents = ''; // 重置点击事件
+                    btn.classList.remove('unique-number');
                     
-                    if (uniqueNum !== null) {
-                        if (num !== uniqueNum) {
-                            btn.classList.add('dimmed');
-                        } else {
-                            btn.classList.add('unique-number');
-                        }
+                    if (uniqueNum !== null && num === uniqueNum) {
+                        btn.classList.add('unique-number');
                     }
                 });
             } catch (e) {
