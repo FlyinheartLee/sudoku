@@ -1190,69 +1190,58 @@
             renderGrid();
         }
 
-        // 检查某行、列、宫中唯一空位应该填什么数字（唯余法）
-        function findUniqueNumberForLine() {
-            // 检查行
-            for (let row = 0; row < 9; row++) {
-                const emptyCells = [];
-                const existingNums = new Set();
-                for (let col = 0; col < 9; col++) {
-                    const idx = row * 9 + col;
-                    if (grid[idx] === 0) {
-                        emptyCells.push(idx);
-                    } else {
-                        existingNums.add(grid[idx]);
-                    }
-                }
-                if (emptyCells.length === 1) {
-                    // 找到该行缺失的数字
-                    for (let num = 1; num <= 9; num++) {
-                        if (!existingNums.has(num)) return num;
-                    }
+        // 检查指定格子所在行、列、宫是否是唯余（只剩这个空位）
+        function findUniqueNumberForCell(cellIdx) {
+            if (cellIdx === null || grid[cellIdx] !== 0) return null;
+            
+            const row = Math.floor(cellIdx / 9);
+            const col = cellIdx % 9;
+            const boxRow = Math.floor(row / 3);
+            const boxCol = Math.floor(col / 3);
+            
+            // 检查所在行
+            const rowEmptyCells = [];
+            const rowNums = new Set();
+            for (let c = 0; c < 9; c++) {
+                const idx = row * 9 + c;
+                if (grid[idx] === 0) rowEmptyCells.push(idx);
+                else rowNums.add(grid[idx]);
+            }
+            if (rowEmptyCells.length === 1 && rowEmptyCells[0] === cellIdx) {
+                for (let num = 1; num <= 9; num++) {
+                    if (!rowNums.has(num)) return num;
                 }
             }
             
-            // 检查列
-            for (let col = 0; col < 9; col++) {
-                const emptyCells = [];
-                const existingNums = new Set();
-                for (let row = 0; row < 9; row++) {
-                    const idx = row * 9 + col;
-                    if (grid[idx] === 0) {
-                        emptyCells.push(idx);
-                    } else {
-                        existingNums.add(grid[idx]);
-                    }
-                }
-                if (emptyCells.length === 1) {
-                    for (let num = 1; num <= 9; num++) {
-                        if (!existingNums.has(num)) return num;
-                    }
+            // 检查所在列
+            const colEmptyCells = [];
+            const colNums = new Set();
+            for (let r = 0; r < 9; r++) {
+                const idx = r * 9 + col;
+                if (grid[idx] === 0) colEmptyCells.push(idx);
+                else colNums.add(grid[idx]);
+            }
+            if (colEmptyCells.length === 1 && colEmptyCells[0] === cellIdx) {
+                for (let num = 1; num <= 9; num++) {
+                    if (!colNums.has(num)) return num;
                 }
             }
             
-            // 检查宫
-            for (let boxRow = 0; boxRow < 3; boxRow++) {
-                for (let boxCol = 0; boxCol < 3; boxCol++) {
-                    const emptyCells = [];
-                    const existingNums = new Set();
-                    for (let i = 0; i < 3; i++) {
-                        for (let j = 0; j < 3; j++) {
-                            const row = boxRow * 3 + i;
-                            const col = boxCol * 3 + j;
-                            const idx = row * 9 + col;
-                            if (grid[idx] === 0) {
-                                emptyCells.push(idx);
-                            } else {
-                                existingNums.add(grid[idx]);
-                            }
-                        }
-                    }
-                    if (emptyCells.length === 1) {
-                        for (let num = 1; num <= 9; num++) {
-                            if (!existingNums.has(num)) return num;
-                        }
-                    }
+            // 检查所在宫
+            const boxEmptyCells = [];
+            const boxNums = new Set();
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const r = boxRow * 3 + i;
+                    const c = boxCol * 3 + j;
+                    const idx = r * 9 + c;
+                    if (grid[idx] === 0) boxEmptyCells.push(idx);
+                    else boxNums.add(grid[idx]);
+                }
+            }
+            if (boxEmptyCells.length === 1 && boxEmptyCells[0] === cellIdx) {
+                for (let num = 1; num <= 9; num++) {
+                    if (!boxNums.has(num)) return num;
                 }
             }
             
@@ -1262,7 +1251,7 @@
         // 更新数字按钮唯余法提示
         function updateNumberPadHighlight() {
             try {
-                const uniqueNum = findUniqueNumberForLine();
+                const uniqueNum = findUniqueNumberForCell(selectedCell);
                 const numBtns = document.querySelectorAll('.num-btn[data-num]');
                 
                 numBtns.forEach(btn => {
