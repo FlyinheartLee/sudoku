@@ -1525,22 +1525,4 @@
         init();
     </script>
 </body>
-</html>ssList.remove('show');
-            }, 2000);
-        }
-
-        // 防止双击缩放
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
-
-        // 启动
-        init();
-    </script>
-</body>
 </html>
