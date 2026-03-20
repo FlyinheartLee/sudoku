@@ -103,6 +103,7 @@
             align-items: center;
             padding: 8px 16px;
             padding-top: max(8px, env(safe-area-inset-top));
+            padding-right: 60px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(99, 102, 241, 0.2);
@@ -910,9 +911,75 @@
             background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
             color: #4f46e5;
         }
+
+        /* 游戏导航菜单 */
+        .game-nav {
+            position: relative;
+            z-index: 100;
+        }
+        .nav-toggle {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 101;
+        }
+        .nav-menu {
+            position: fixed;
+            top: max(60px, calc(env(safe-area-inset-top) + 50px));
+            right: 10px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+            z-index: 100;
+        }
+        .nav-menu.active {
+            display: flex;
+        }
+        .nav-menu a {
+            padding: 10px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #333;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .nav-menu a:hover {
+            background: var(--primary-light);
+        }
     </style>
 </head>
 <body>
+    <!-- 游戏导航 -->
+    <div class="game-nav">
+        <button class="nav-toggle" onclick="toggleNav()">🎮</button>
+        <div class="nav-menu" id="navMenu">
+            <a href="sudoku-h5.html">🧩 数独</a>
+            <a href="number-maze.html">🔢 数字迷宫</a>
+            <a href="skyscraper.html">🏢 摩天楼</a>
+            <a href="game2048.html">🔢 2048</a>
+            <a href="klotski.html">🧩 华容道</a>
+            <a href="minesweeper.html">💣 扫雷</a>
+            <a href="pipe.html">🔧 接水管</a>
+            <a href="memory.html">🃏 记忆翻牌</a>
+            <a href="sokoban.html">📦 推箱子</a>
+            <a href="hashi.html">🌉 数桥</a>
+        </div>
+    </div>
+
     <!-- 背景装饰 -->
     <div class="bg-decoration"></div>
 
@@ -1705,6 +1772,16 @@
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.game-switcher') && !e.target.closest('.switcher-menu')) {
                 document.getElementById('switcher-menu').classList.remove('show');
+            }
+        });
+
+        // 游戏导航菜单
+        function toggleNav() {
+            document.getElementById('navMenu').classList.toggle('active');
+        }
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.game-nav')) {
+                document.getElementById('navMenu').classList.remove('active');
             }
         });
 
