@@ -255,7 +255,7 @@
             align-items: center;
             justify-content: center;
             font-size: clamp(1.4rem, 6vw, 2.2rem);
-            font-weight: 800;
+            font-weight: 400;
             cursor: pointer;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
@@ -291,13 +291,13 @@
 
         .cell.fixed {
             color: #1e293b;
-            font-weight: 900;
+            font-weight: 500;
             background: #e2e8f0;
         }
 
         .cell.user-input {
             color: #4f46e5;
-            font-weight: 800;
+            font-weight: 400;
         }
 
         .cell.error {
@@ -324,6 +324,22 @@
         .cell.notes-mode {
             background: #ecfdf5 !important;
             box-shadow: inset 0 0 0 2px #10b981;
+        }
+
+        /* 提示高亮动画 */
+        .cell.hint-highlight {
+            animation: hintPulse 1.5s ease-in-out 2;
+        }
+
+        @keyframes hintPulse {
+            0%, 100% { 
+                background: #fef3c7;
+                box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0);
+            }
+            50% { 
+                background: #fde68a;
+                box-shadow: inset 0 0 20px rgba(251, 191, 36, 0.5);
+            }
         }
 
         /* 3x3 区块边框 */
@@ -353,13 +369,13 @@
             align-items: center;
             justify-content: center;
             color: #94a3b8;
-            font-weight: 500;
+            font-weight: 400;
             border-radius: 2px;
         }
 
         .cell .notes span.has-note {
             color: #10b981;
-            font-weight: 700;
+            font-weight: 500;
             background: rgba(16, 185, 129, 0.15);
         }
 
@@ -442,9 +458,9 @@
             flex: 1;
             max-width: 56px;
             min-width: 40px;
-            height: 52px;
+            height: 58px;
             font-size: 1.6rem;
-            font-weight: 800;
+            font-weight: 600;
             background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
             color: #4f46e5;
             border: 2px solid #c7d2fe;
@@ -452,11 +468,13 @@
             cursor: pointer;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             position: relative;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+            padding: 2px;
         }
 
         .num-btn::before {
@@ -499,6 +517,18 @@
 
         .num-btn.erase:active {
             background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .num-btn .remaining-count {
+            font-size: 0.55rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-top: -2px;
+            line-height: 1;
+        }
+
+        .num-btn.notes-active .remaining-count {
+            color: #6ee7b7;
         }
 
         /* 弹窗 */
@@ -753,10 +783,14 @@
             }
             
             .num-btn {
-                height: 40px;
+                height: 44px;
                 max-width: 48px;
                 font-size: 1.3rem;
                 border-radius: 10px;
+            }
+
+            .num-btn .remaining-count {
+                font-size: 0.5rem;
             }
         }
 
@@ -841,17 +875,17 @@
     <!-- 数字键盘 - 两排布局 -->
     <div class="number-pad">
         <div class="number-pad-row">
-            <button class="num-btn" data-num="1" onclick="inputNumber(1)">1</button>
-            <button class="num-btn" data-num="2" onclick="inputNumber(2)">2</button>
-            <button class="num-btn" data-num="3" onclick="inputNumber(3)">3</button>
-            <button class="num-btn" data-num="4" onclick="inputNumber(4)">4</button>
-            <button class="num-btn" data-num="5" onclick="inputNumber(5)">5</button>
+            <button class="num-btn" data-num="1" onclick="inputNumber(1)">1<span class="remaining-count" id="remaining-1"></span></button>
+            <button class="num-btn" data-num="2" onclick="inputNumber(2)">2<span class="remaining-count" id="remaining-2"></span></button>
+            <button class="num-btn" data-num="3" onclick="inputNumber(3)">3<span class="remaining-count" id="remaining-3"></span></button>
+            <button class="num-btn" data-num="4" onclick="inputNumber(4)">4<span class="remaining-count" id="remaining-4"></span></button>
+            <button class="num-btn" data-num="5" onclick="inputNumber(5)">5<span class="remaining-count" id="remaining-5"></span></button>
         </div>
         <div class="number-pad-row">
-            <button class="num-btn" data-num="6" onclick="inputNumber(6)">6</button>
-            <button class="num-btn" data-num="7" onclick="inputNumber(7)">7</button>
-            <button class="num-btn" data-num="8" onclick="inputNumber(8)">8</button>
-            <button class="num-btn" data-num="9" onclick="inputNumber(9)">9</button>
+            <button class="num-btn" data-num="6" onclick="inputNumber(6)">6<span class="remaining-count" id="remaining-6"></span></button>
+            <button class="num-btn" data-num="7" onclick="inputNumber(7)">7<span class="remaining-count" id="remaining-7"></span></button>
+            <button class="num-btn" data-num="8" onclick="inputNumber(8)">8<span class="remaining-count" id="remaining-8"></span></button>
+            <button class="num-btn" data-num="9" onclick="inputNumber(9)">9<span class="remaining-count" id="remaining-9"></span></button>
             <button class="num-btn erase" onclick="inputNumber(0)">⌫</button>
         </div>
     </div>
@@ -910,6 +944,7 @@
         let notes = Array(81).fill().map(() => new Set());
         let history = [];
         let selectedDifficulty = 'easy';
+        let hintCell = null;
 
         // 初始化
         function init() {
@@ -978,11 +1013,13 @@
             notes = Array(81).fill().map(() => new Set());
             history = [];
             notesMode = false;
+            hintCell = null;
             updateNotesButton();
             updateNumberPad();
             
             renderGrid();
             updateRemaining();
+            updateNumberRemaining();
             selectedCell = null;
         }
 
@@ -1078,6 +1115,11 @@
                 cell.className = 'cell';
                 cell.innerHTML = '';
                 
+                // 提示高亮
+                if (idx === hintCell) {
+                    cell.classList.add('hint-highlight');
+                }
+                
                 if (idx === selectedCell && notesMode && !isFixed) {
                     cell.classList.add('notes-mode');
                 }
@@ -1170,6 +1212,33 @@
             }
         }
 
+        // 清除相关笔记 - 当填入数字时，清除同行、同列、同宫内的该数字笔记
+        function clearRelatedNotes(cellIdx, num) {
+            if (num === 0) return;
+            
+            const row = Math.floor(cellIdx / 9);
+            const col = cellIdx % 9;
+            const boxRow = Math.floor(row / 3);
+            const boxCol = Math.floor(col / 3);
+            
+            let cleared = false;
+            
+            for (let i = 0; i < 81; i++) {
+                const r = Math.floor(i / 9);
+                const c = i % 9;
+                const bRow = Math.floor(r / 3);
+                const bCol = Math.floor(c / 3);
+                
+                // 如果是同行、同列或同宫，且包含该数字的笔记
+                if ((r === row || c === col || (bRow === boxRow && bCol === boxCol)) && notes[i].has(num)) {
+                    notes[i].delete(num);
+                    cleared = true;
+                }
+            }
+            
+            return cleared;
+        }
+
         // 输入数字
         function inputNumber(num) {
             if (selectedCell === null || fixedCells[selectedCell]) {
@@ -1195,11 +1264,14 @@
                 grid[selectedCell] = num;
                 if (num !== 0) {
                     notes[selectedCell].clear();
+                    // 清除相关笔记
+                    clearRelatedNotes(selectedCell, num);
                 }
             }
             
             renderGrid();
             updateRemaining();
+            updateNumberRemaining();
             
             if (isComplete()) {
                 clearInterval(timerInterval);
@@ -1220,6 +1292,7 @@
             selectedCell = last.cell;
             renderGrid();
             updateRemaining();
+            updateNumberRemaining();
             showToast('已撤销', 'success');
         }
 
@@ -1256,6 +1329,39 @@
             document.getElementById('remaining').textContent = remaining;
         }
 
+        // 更新每个数字的剩余可填数
+        function updateNumberRemaining() {
+            for (let num = 1; num <= 9; num++) {
+                const count = countRemainingForNumber(num);
+                const elem = document.getElementById(`remaining-${num}`);
+                if (elem) {
+                    if (count === 0) {
+                        elem.textContent = '';
+                    } else {
+                        elem.textContent = `剩${count}`;
+                    }
+                }
+            }
+        }
+
+        // 计算某个数字还剩多少位置可填
+        function countRemainingForNumber(num) {
+            let count = 0;
+            for (let i = 0; i < 81; i++) {
+                if (grid[i] === 0) {
+                    const row = Math.floor(i / 9);
+                    const col = i % 9;
+                    const board = Array(9).fill().map((_, r) => 
+                        Array(9).fill().map((_, c) => grid[r * 9 + c])
+                    );
+                    if (isValid(board, row, col, num)) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
         // 提示
         function getHint() {
             if (selectedCell === null || fixedCells[selectedCell] || grid[selectedCell] !== 0) {
@@ -1282,9 +1388,22 @@
             
             grid[selectedCell] = solution[selectedCell];
             notes[selectedCell].clear();
+            // 清除相关笔记
+            clearRelatedNotes(selectedCell, solution[selectedCell]);
+            
+            // 设置提示高亮
+            hintCell = selectedCell;
+            
             renderGrid();
             updateRemaining();
+            updateNumberRemaining();
             showToast('💡 已填入提示', 'success');
+            
+            // 3秒后移除高亮
+            setTimeout(() => {
+                hintCell = null;
+                renderGrid();
+            }, 3000);
         }
 
         // 笔记模式
