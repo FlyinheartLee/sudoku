@@ -963,8 +963,8 @@
 
     <!-- 工具栏 -->
     <div class="toolbar">
-        <button class="tool-btn tool-btn-new" onclick="showNewGameModal()">
-            <span>🎮</span> 新游戏
+        <button class="tool-btn tool-btn-new" onclick="autoNotes()">
+            <span>📝</span> 一键笔记
         </button>
         <button class="tool-btn tool-btn-secondary" id="notes-btn" onclick="toggleNotesMode()">
             <span>📝</span> 笔记
@@ -1186,7 +1186,7 @@
             return true;
         }
 
-        // 创建谜题
+        // 创建谜题 - 使用挖洞法确保唯一解
         function createPuzzle(solution, level) {
             const puzzle = [...solution];
             let cellsToRemove;
@@ -1195,18 +1195,76 @@
                 case 'easy': cellsToRemove = 35; break;
                 case 'medium': cellsToRemove = 45; break;
                 case 'hard': cellsToRemove = 55; break;
-                case 'expert': cellsToRemove = 62; break;
+                case 'expert': cellsToRemove = 60; break;
                 default: cellsToRemove = 55;
             }
             
+            // 创建位置列表并打乱
             const positions = Array.from({length: 81}, (_, i) => i);
             shuffleArray(positions);
             
-            for (let i = 0; i < cellsToRemove; i++) {
-                puzzle[positions[i]] = 0;
+            let removed = 0;
+            for (let i = 0; i < positions.length && removed < cellsToRemove; i++) {
+                const pos = positions[i];
+                if (puzzle[pos] === 0) continue;
+                
+                const originalValue = puzzle[pos];
+                puzzle[pos] = 0;
+                
+                // 检查是否仍有唯一解
+                const board = arrayToBoard(puzzle);
+                if (countSolutions(board) === 1) {
+                    removed++;
+                } else {
+                    // 恢复数字，保持唯一解
+                    puzzle[pos] = originalValue;
+                }
             }
             
             return puzzle;
+        }
+        
+        // 将一维数组转为二维数组
+        function arrayToBoard(array) {
+            const board = [];
+            for (let i = 0; i < 9; i++) {
+                board.push(array.slice(i * 9, i * 9 + 9));
+            }
+            return board;
+        }
+        
+        // 将二维数组转为一维数组
+        function boardToArray(board) {
+            return board.flat();
+        }
+        
+        // 计算数独解的数量（用于验证唯一解）
+        function countSolutions(board) {
+            let count = 0;
+            
+            function solve(board) {
+                if (count > 1) return; // 提前退出，不需要知道所有解
+                
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        if (board[row][col] === 0) {
+                            for (let num = 1; num <= 9; num++) {
+                                if (isValid(board, row, col, num)) {
+                                    board[row][col] = num;
+                                    solve(board);
+                                    board[row][col] = 0;
+                                    if (count > 1) return;
+                                }
+                            }
+                            return;
+                        }
+                    }
+                }
+                count++;
+            }
+            
+            solve(board);
+            return count;
         }
 
         // 渲染网格
@@ -1381,24 +1439,55 @@
             });
         }
 
-        // 标记错误
+        // 标记错误 - 检查是否有重复数字
         function markErrors() {
             const cells = document.querySelectorAll('.cell');
             
+            // 检查每个已填入的非固定数字
             for (let i = 0; i < 81; i++) {
-                if (grid[i] !== 0 && !fixedCells[i]) {
-                    const row = Math.floor(i / 9);
-                    const col = i % 9;
-                    const board = Array(9).fill().map((_, r) => 
-                        Array(9).fill().map((_, c) => grid[r * 9 + c])
-                    );
-                    
-                    const temp = board[row][col];
-                    board[row][col] = 0;
-                    
-                    if (!isValid(board, row, col, temp)) {
-                        cells[i].classList.add('error');
+                if (grid[i] === 0 || fixedCells[i]) continue;
+                
+                const row = Math.floor(i / 9);
+                const col = i % 9;
+                const num = grid[i];
+                let hasError = false;
+                
+                // 检查同行是否有相同数字
+                for (let c = 0; c < 9; c++) {
+                    if (c !== col && grid[row * 9 + c] === num) {
+                        hasError = true;
+                        break;
                     }
+                }
+                
+                // 检查同列是否有相同数字
+                if (!hasError) {
+                    for (let r = 0; r < 9; r++) {
+                        if (r !== row && grid[r * 9 + col] === num) {
+                            hasError = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 检查同宫是否有相同数字
+                if (!hasError) {
+                    const boxRow = Math.floor(row / 3) * 3;
+                    const boxCol = Math.floor(col / 3) * 3;
+                    for (let r = boxRow; r < boxRow + 3; r++) {
+                        for (let c = boxCol; c < boxCol + 3; c++) {
+                            const idx = r * 9 + c;
+                            if (idx !== i && grid[idx] === num) {
+                                hasError = true;
+                                break;
+                            }
+                        }
+                        if (hasError) break;
+                    }
+                }
+                
+                if (hasError) {
+                    cells[i].classList.add('error');
                 }
             }
         }
@@ -1496,22 +1585,49 @@
             return isValidSolution();
         }
 
-        // 验证解答
+        // 验证解答 - 确保每行、每列、每个3x3宫都包含1-9且不重复
         function isValidSolution() {
+            // 检查是否有空格
             for (let i = 0; i < 81; i++) {
-                const row = Math.floor(i / 9);
-                const col = i % 9;
-                const board = Array(9).fill().map((_, r) => 
-                    Array(9).fill().map((_, c) => {
-                        const idx = r * 9 + c;
-                        return idx === i ? 0 : grid[idx];
-                    })
-                );
-                
-                if (!isValid(board, row, col, grid[i])) {
-                    return false;
+                if (grid[i] === 0) return false;
+            }
+            
+            // 检查每行
+            for (let row = 0; row < 9; row++) {
+                const rowSet = new Set();
+                for (let col = 0; col < 9; col++) {
+                    const num = grid[row * 9 + col];
+                    if (num < 1 || num > 9 || rowSet.has(num)) return false;
+                    rowSet.add(num);
                 }
             }
+            
+            // 检查每列
+            for (let col = 0; col < 9; col++) {
+                const colSet = new Set();
+                for (let row = 0; row < 9; row++) {
+                    const num = grid[row * 9 + col];
+                    if (num < 1 || num > 9 || colSet.has(num)) return false;
+                    colSet.add(num);
+                }
+            }
+            
+            // 检查每个3x3宫
+            for (let boxRow = 0; boxRow < 3; boxRow++) {
+                for (let boxCol = 0; boxCol < 3; boxCol++) {
+                    const boxSet = new Set();
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            const row = boxRow * 3 + i;
+                            const col = boxCol * 3 + j;
+                            const num = grid[row * 9 + col];
+                            if (num < 1 || num > 9 || boxSet.has(num)) return false;
+                            boxSet.add(num);
+                        }
+                    }
+                }
+            }
+            
             return true;
         }
 
@@ -1584,6 +1700,69 @@
                 hintCell = null;
                 renderGrid();
             }, 3000);
+        }
+
+        // 一键笔记：为所有空格计算可能的数字
+        function autoNotes() {
+            let filledCount = 0;
+            
+            for (let i = 0; i < 81; i++) {
+                // 只处理空格
+                if (grid[i] !== 0 || fixedCells[i]) continue;
+                
+                const row = Math.floor(i / 9);
+                const col = i % 9;
+                
+                // 获取当前格子可能的数字
+                const possibleNumbers = getPossibleNumbers(row, col);
+                
+                // 清空原有笔记，设置新笔记
+                notes[i].clear();
+                possibleNumbers.forEach(num => notes[i].add(num));
+                
+                if (possibleNumbers.length > 0) {
+                    filledCount++;
+                }
+            }
+            
+            renderGrid();
+            updateNumberPadHighlight();
+            showToast(`📝 已为 ${filledCount} 个空格填充笔记`, 'success');
+        }
+        
+        // 获取指定格子可能的数字（排除同行、同列、同宫已有的数字）
+        function getPossibleNumbers(row, col) {
+            const possible = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            
+            // 排除同行已有的数字
+            for (let c = 0; c < 9; c++) {
+                const idx = row * 9 + c;
+                if (grid[idx] !== 0) {
+                    possible.delete(grid[idx]);
+                }
+            }
+            
+            // 排除同列已有的数字
+            for (let r = 0; r < 9; r++) {
+                const idx = r * 9 + col;
+                if (grid[idx] !== 0) {
+                    possible.delete(grid[idx]);
+                }
+            }
+            
+            // 排除同宫（3x3）已有的数字
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let r = boxRow; r < boxRow + 3; r++) {
+                for (let c = boxCol; c < boxCol + 3; c++) {
+                    const idx = r * 9 + c;
+                    if (grid[idx] !== 0) {
+                        possible.delete(grid[idx]);
+                    }
+                }
+            }
+            
+            return Array.from(possible);
         }
 
         // 笔记模式
