@@ -144,16 +144,17 @@
         }
 
         .difficulty-badge {
-            padding: 4px 10px;
+            padding: 3px 8px;
             background: rgba(255, 255, 255, 0.95);
             border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 16px;
-            font-size: 0.7rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
             font-weight: 700;
             color: #4f46e5;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
         }
 
         /* 统计栏 - 压缩版本 */
@@ -221,29 +222,16 @@
 
         .grid-container {
             background: rgba(255, 255, 255, 0.95);
-            padding: 2px;
-            border-radius: 8px;
-            border: none;
-            box-shadow: none;
+            padding: 0;
+            border-radius: 0;
+            border: 4px solid #1e293b;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
             width: min(95vw, calc(100vh - 200px));
             height: min(95vw, calc(100vh - 200px));
             max-width: min(95vw, calc(100vh - 200px));
             max-height: min(95vw, calc(100vh - 200px));
             aspect-ratio: 1;
             position: relative;
-        }
-
-        .grid-container::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #818cf8 100%);
-            border-radius: 18px;
-            z-index: -1;
-            opacity: 0.8;
         }
 
         .sudoku-grid {
@@ -254,7 +242,7 @@
             background: rgba(51, 65, 85, 0.8);
             width: 100%;
             height: 100%;
-            border-radius: 8px;
+            border-radius: 0;
             overflow: hidden;
         }
 
@@ -320,6 +308,26 @@
             animation: sameNumberPulse 1.5s ease-in-out infinite;
             border: 2px solid #f59e0b;
             z-index: 5;
+        }
+
+        /* 笔记中的相同数字高亮 - 红色 */
+        .cell .notes span.same-number-note {
+            color: #dc2626 !important;
+            font-weight: 700 !important;
+            background: rgba(220, 38, 38, 0.15) !important;
+            border-radius: 2px;
+            animation: notePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes notePulse {
+            0%, 100% { 
+                transform: scale(1);
+                background: rgba(220, 38, 38, 0.15);
+            }
+            50% { 
+                transform: scale(1.1);
+                background: rgba(220, 38, 38, 0.25);
+            }
         }
 
         @keyframes sameNumberPulse {
@@ -892,12 +900,12 @@
 
         /* 玩法介绍按钮 */
         .how-to-play-btn {
-            padding: 5px 10px;
+            padding: 3px 8px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
             border: none;
-            border-radius: 16px;
-            font-size: 0.7rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -1569,6 +1577,19 @@
                     // 被选数高亮（笔记模式下不高亮）
                     if (grid[idx] !== 0 && grid[idx] === grid[selectedCell] && !notesMode) {
                         cell.classList.add('same-number');
+                    }
+                    
+                    // 笔记中的相同数字也要高亮显示
+                    if (!notesMode && grid[selectedCell] !== 0) {
+                        const notesDiv = cell.querySelector('.notes');
+                        if (notesDiv) {
+                            const noteSpans = notesDiv.querySelectorAll('span.has-note');
+                            noteSpans.forEach(span => {
+                                if (parseInt(span.textContent) === grid[selectedCell]) {
+                                    span.classList.add('same-number-note');
+                                }
+                            });
+                        }
                     }
                 }
             });
