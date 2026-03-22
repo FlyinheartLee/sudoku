@@ -223,7 +223,7 @@
         .grid-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 0;
-            border-radius: 0;
+            border-radius: 0 !important;
             border: 4px solid #1e293b;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
             width: min(95vw, calc(100vh - 200px));
@@ -1446,6 +1446,10 @@
                         if (cellNotes.has(i)) {
                             span.textContent = i;
                             span.classList.add('has-note');
+                            // 如果选中了相同数字的格子，高亮笔记中的这个数字
+                            if (selectedCell !== null && !notesMode && grid[selectedCell] !== 0 && grid[selectedCell] === i) {
+                                span.classList.add('same-number-note');
+                            }
                         }
                         notesDiv.appendChild(span);
                     }
