@@ -101,14 +101,19 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 16px;
+            padding: 8px 12px;
             padding-top: max(8px, env(safe-area-inset-top));
-            padding-right: 60px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(99, 102, 241, 0.2);
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .logo {
@@ -887,27 +892,21 @@
 
         /* 玩法介绍按钮 */
         .how-to-play-btn {
-            position: fixed;
-            top: max(10px, env(safe-area-inset-top));
-            right: 60px;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            padding: 5px 10px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
             border: none;
-            font-size: 1.2rem;
+            border-radius: 16px;
+            font-size: 0.7rem;
+            font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
-            z-index: 101;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(245, 158, 11, 0.4);
+            white-space: nowrap;
         }
 
         .how-to-play-btn:active {
             transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
         }
 
         /* 玩法介绍模态框 */
@@ -990,7 +989,7 @@
             display: flex;
         }
         .nav-menu a {
-            padding: 10px 16px;
+            padding: 8px 12px;
             border-radius: 12px;
             text-decoration: none;
             color: #333;
@@ -1003,9 +1002,6 @@
     </style>
 </head>
 <body>
-    <!-- 玩法介绍按钮 -->
-    <button class="how-to-play-btn" onclick="showHowToPlay()" title="玩法介绍">❓</button>
-
     <!-- 游戏导航 -->
     <div class="game-nav">
         <button class="nav-toggle" onclick="toggleNav()">🎮</button>
@@ -1032,7 +1028,8 @@
             <div class="logo-icon">🧩</div>
             <div class="logo-text">数独 Master</div>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="header-right">
+            <button class="how-to-play-btn" onclick="showHowToPlay()">❓ 玩法</button>
             <span class="difficulty-badge" id="difficulty-badge">困难</span>
             <div class="menu-btn" onclick="showNewGameModal()">
                 <span></span>
