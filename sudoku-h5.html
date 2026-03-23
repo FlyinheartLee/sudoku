@@ -351,13 +351,31 @@
             border: none;
         }
 
+        /* 实时错误样式 - 更明显的抖动和红色 */
         .cell.error {
             background: #fee2e2 !important;
             color: #dc2626 !important;
-            animation: shake 0.5s ease;
+            animation: shakeError 0.5s ease;
+            border: 2px solid #dc2626 !important;
         }
 
-        @keyframes shake {
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-4px); }
+            40% { transform: translateX(4px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        /* 唯一解冲突样式 - 橙色警告 */
+        .cell.uniqueness-error {
+            background: #fff7ed !important;
+            color: #ea580c !important;
+            animation: shakeWarning 0.5s ease;
+            border: 2px solid #f97316 !important;
+        }
+
+        @keyframes shakeWarning {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-3px); }
             75% { transform: translateX(3px); }
@@ -823,6 +841,12 @@
             color: #dc2626;
         }
 
+        .toast.warning {
+            border-color: #f59e0b;
+            background: rgba(255, 251, 235, 0.98);
+            color: #d97706;
+        }
+
         /* 横屏优化 */
         @media (orientation: landscape) and (max-height: 500px) {
             .header {
@@ -1155,6 +1179,13 @@
                     <li>使用<strong>唯余法</strong>：某行/列/宫只剩一个空格时，该格数字可确定</li>
                     <li>善用笔记功能记录可能的数字，帮助推理</li>
                     <li>数字按钮会显示剩余可填数量，为0时会自动隐藏</li>
+                    <li><span class="highlight">实时校验</span>：填错数字时会立即提示，保持唯一解</li>
+                </ul>
+
+                <h3>⚠️ 错误提示</h3>
+                <ul>
+                    <li><span style="color:#dc2626">红色闪烁</span>：行/列/宫内有重复数字</li>
+                    <li><span style="color:#ea580c">橙色闪烁</span>：填入后导致无解或多解</li>
                 </ul>
             </div>
             <div class="modal-actions">
@@ -1193,6 +1224,8 @@
         let history = [];
         let selectedDifficulty = 'hard';
         let hintCell = null;
+        let errorCells = new Set(); // 记录错误格子的索引
+        let uniquenessErrorCells = new Set(); // 记录唯一解冲突的格子
 
         // 初始化
         function init() {
@@ -1247,6 +1280,8 @@
             });
         }
 
+        // ==================== 核心修复：唯一解保证 ====================
+
         // 新游戏 - 带详细调试和重试机制
         function newGame() {
             console.log('═══════════════════════════════════════');
@@ -1259,55 +1294,62 @@
             timerInterval = setInterval(updateTimer, 1000);
 
             let attempts = 0;
-            const maxAttempts = 5; // 减少重试次数，因为单次生成已经更可靠
-            let lastError = '';
+            const maxAttempts = 10;
+            let puzzle = null;
+            let validPuzzle = null;
 
             do {
-                console.log(`\n--- 尝试 ${attempts + 1}/${maxAttempts} ---`);
+                console.log(`\n--- 生成尝试 ${attempts + 1}/${maxAttempts} ---`);
                 const totalStartTime = performance.now();
                 
                 // 生成完整解答
                 const solutionStartTime = performance.now();
-                solution = generateSolution();
+                solution = generateCompleteBoard();
                 const solutionTime = performance.now() - solutionStartTime;
                 console.log(`✓ 终盘生成完成 (${solutionTime.toFixed(2)}ms)`);
                 
                 // 创建谜题
-                grid = createPuzzle(solution, difficulty);
-                fixedCells = grid.map((val, idx) => val !== 0);
-
+                puzzle = createPuzzleWithUniqueSolution(solution, difficulty);
+                
                 // 验证生成的谜题
                 const validationStartTime = performance.now();
-                const validation = validatePuzzle(grid);
+                const validation = validatePuzzleStrict(puzzle);
                 const validationTime = performance.now() - validationStartTime;
                 
                 console.log(`✓ 谜体验证完成 (${validationTime.toFixed(2)}ms)`);
                 
                 const totalTime = performance.now() - totalStartTime;
                 
-                if (validation.valid) {
-                    console.log(`\n✅ 成功生成有效谜题！总耗时: ${totalTime.toFixed(2)}ms`);
+                if (validation.valid && validation.unique) {
+                    validPuzzle = puzzle;
+                    console.log(`\n✅ 成功生成唯一解谜题！总耗时: ${totalTime.toFixed(2)}ms`);
+                    console.log(`   - 解数量验证: ${validation.solutionCount}`);
                     console.log('═══════════════════════════════════════\n');
-                    break; // 谜题有效，退出循环
+                    break;
                 }
 
-                lastError = validation.error;
                 console.warn(`❌ 谜题验证失败: ${validation.error}`);
-                console.warn(`   解数量: ${validation.solutionCount || '未知'}`);
+                console.warn(`   解数量: ${validation.solutionCount !== undefined ? validation.solutionCount : '未知'}`);
                 attempts++;
 
                 if (attempts >= maxAttempts) {
                     console.error(`\n❌ 生成有效谜题失败，已尝试 ${maxAttempts} 次`);
                     console.error('═══════════════════════════════════════\n');
-                    showToast('⚠️ 生成谜题失败，请降低难度重试', 'error');
+                    showToast('⚠️ 生成谜题失败，请重试', 'error');
                     return;
                 }
             } while (attempts < maxAttempts);
 
+            // 使用验证通过的谜题
+            grid = [...validPuzzle];
+            fixedCells = grid.map((val, idx) => val !== 0);
+            
             notes = Array(81).fill().map(() => new Set());
             history = [];
             notesMode = false;
             hintCell = null;
+            errorCells.clear();
+            uniquenessErrorCells.clear();
             updateNotesButton();
             updateNumberPad();
 
@@ -1316,38 +1358,43 @@
             updateNumberRemaining();
             selectedCell = null;
             
-            // 调试：在控制台输出当前谜题
-            console.log('📋 当前谜题 (0表示空格):');
-            console.log(grid.join(','));
+            // 最终验证确认
+            const finalValidation = validatePuzzleStrict(grid);
+            console.log('📋 最终谜题验证结果:');
+            console.log(`   - 有效: ${finalValidation.valid}`);
+            console.log(`   - 唯一解: ${finalValidation.unique}`);
+            console.log(`   - 解数量: ${finalValidation.solutionCount}`);
+            console.log(`   - 空格数: ${grid.filter(v => v === 0).length}`);
+            console.log(`   - 提示数: ${grid.filter(v => v !== 0).length}`);
+            console.log('');
         }
 
-        // 生成完整解答
-        function generateSolution() {
+        // 生成完整数独终盘
+        function generateCompleteBoard() {
             const board = Array(9).fill().map(() => Array(9).fill(0));
-            fillBoard(board);
+            
+            // 填充对角线的3个3x3宫（相互独立，可并行填充）
+            for (let box = 0; box < 3; box++) {
+                fillBox(board, box * 3, box * 3);
+            }
+            
+            // 使用回溯法填充剩余空格
+            solveBoard(board);
+            
             return board.flat();
         }
 
-        // 填充数独板
-        function fillBoard(board) {
+        // 填充一个3x3宫
+        function fillBox(board, startRow, startCol) {
             const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            shuffleArray(nums);
             
-            for (let row = 0; row < 9; row++) {
-                for (let col = 0; col < 9; col++) {
-                    if (board[row][col] === 0) {
-                        shuffleArray(nums);
-                        for (let num of nums) {
-                            if (isValid(board, row, col, num)) {
-                                board[row][col] = num;
-                                if (fillBoard(board)) return true;
-                                board[row][col] = 0;
-                            }
-                        }
-                        return false;
-                    }
+            let idx = 0;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    board[startRow + i][startCol + j] = nums[idx++];
                 }
             }
-            return true;
         }
 
         // 打乱数组
@@ -1358,30 +1405,55 @@
             }
         }
 
-        // 验证数字是否有效
-        function isValid(board, row, col, num) {
+        // 使用回溯法求解数独（用于生成完整终盘）
+        function solveBoard(board) {
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] === 0) {
+                        const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                        shuffleArray(nums);
+                        
+                        for (let num of nums) {
+                            if (isValidPlacement(board, row, col, num)) {
+                                board[row][col] = num;
+                                if (solveBoard(board)) return true;
+                                board[row][col] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // 验证数字放置是否有效
+        function isValidPlacement(board, row, col, num) {
+            // 检查行
             for (let x = 0; x < 9; x++) {
                 if (board[row][x] === num) return false;
             }
             
+            // 检查列
             for (let x = 0; x < 9; x++) {
                 if (board[x][col] === num) return false;
             }
             
-            const startRow = row - row % 3;
-            const startCol = col - col % 3;
+            // 检查3x3宫
+            const startRow = Math.floor(row / 3) * 3;
+            const startCol = Math.floor(col / 3) * 3;
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
-                    if (board[i + startRow][j + startCol] === num) return false;
+                    if (board[startRow + i][startCol + j] === num) return false;
                 }
             }
             
             return true;
         }
 
-        // 创建谜题 - 使用挖洞法确保唯一解（优化版）
-        function createPuzzle(solution, level) {
-            console.log(`🎲 开始生成${level}难度谜题...`);
+        // 创建确保唯一解的谜题（挖洞算法）
+        function createPuzzleWithUniqueSolution(solution, level) {
+            console.log(`🎲 开始生成${level}难度谜题（确保唯一解）...`);
             const startTime = performance.now();
             
             const puzzle = [...solution];
@@ -1390,113 +1462,53 @@
             switch (level) {
                 case 'easy': cellsToRemove = 35; break;
                 case 'medium': cellsToRemove = 45; break;
-                case 'hard': cellsToRemove = 50; break;  // 降低到50，55太难生成
-                case 'expert': cellsToRemove = 55; break; // 降低到55，60几乎不可能
+                case 'hard': cellsToRemove = 50; break;
                 default: cellsToRemove = 50;
             }
 
-            // 创建位置列表并打乱（使用对称挖洞）
-            const positions = generateSymmetricPositions();
-            
-            let removed = 0;
-            let attempts = 0;
-            const maxAttempts = positions.length;
-            
-            // 使用Set来跟踪已处理的位置对（对称位置）
-            const processedPairs = new Set();
+            // 生成随机位置列表（打乱顺序）
+            const positions = [];
+            for (let i = 0; i < 81; i++) {
+                positions.push(i);
+            }
+            shuffleArray(positions);
 
-            for (let i = 0; i < positions.length && removed < cellsToRemove && attempts < maxAttempts; i++) {
-                const pos = positions[i];
+            let removed = 0;
+            let attempted = 0;
+            const maxAttempts = positions.length;
+
+            for (const pos of positions) {
+                if (removed >= cellsToRemove || attempted >= maxAttempts) break;
+                attempted++;
                 
-                // 检查这个位置是否已经在处理过的对中
-                const symmetricPos = 80 - pos; // 中心对称位置
-                const pairKey = pos < symmetricPos ? `${pos}-${symmetricPos}` : `${symmetricPos}-${pos}`;
-                
-                if (processedPairs.has(pairKey)) continue;
-                processedPairs.add(pairKey);
-                
-                // 如果当前位置已经是0，跳过
                 if (puzzle[pos] === 0) continue;
-                
-                attempts++;
                 
                 const originalValue = puzzle[pos];
                 puzzle[pos] = 0;
 
-                // 检查是否仍有唯一解（创建board的深拷贝）
+                // 关键：验证是否仍有唯一解
                 const boardCopy = arrayToBoard(puzzle);
-                const solutionCount = countSolutions(boardCopy);
+                const solutionCount = countSolutionsWithLimit(boardCopy, 2);
 
                 if (solutionCount === 1) {
                     removed++;
-                    console.log(`✓ 位置 ${pos} 已移除 (${removed}/${cellsToRemove})`);
-                    
-                    // 如果对称位置不同，也尝试移除对称位置
-                    if (symmetricPos !== pos && puzzle[symmetricPos] !== 0) {
-                        const symValue = puzzle[symmetricPos];
-                        puzzle[symmetricPos] = 0;
-                        
-                        const symBoardCopy = arrayToBoard(puzzle);
-                        const symSolutionCount = countSolutions(symBoardCopy);
-                        
-                        if (symSolutionCount === 1) {
-                            removed++;
-                            console.log(`✓ 对称位置 ${symmetricPos} 已移除 (${removed}/${cellsToRemove})`);
-                        } else {
-                            puzzle[symmetricPos] = symValue;
-                            console.log(`✗ 对称位置 ${symmetricPos} 不能移除，恢复`);
-                        }
+                    if (removed % 10 === 0) {
+                        console.log(`  已移除 ${removed}/${cellsToRemove} 个数字...`);
                     }
                 } else {
                     // 恢复数字，保持唯一解
                     puzzle[pos] = originalValue;
-                    console.log(`✗ 位置 ${pos} 不能移除（${solutionCount === 0 ? '无解' : solutionCount + '解'}），恢复`);
                 }
             }
 
             const endTime = performance.now();
-            
-            // 最终验证
-            const validation = validatePuzzle(puzzle);
-            if (!validation.valid) {
-                console.error('❌ 生成的谜题验证失败:', validation.error);
-                console.error('谜题状态:', puzzle);
-            } else {
-                console.log(`✅ 成功生成唯一解谜题！`);
-                console.log(`   - 耗时: ${(endTime - startTime).toFixed(2)}ms`);
-                console.log(`   - 目标移除: ${cellsToRemove}，实际移除: ${removed}`);
-                console.log(`   - 剩余提示: ${81 - removed} 个`);
-                console.log(`   - 难度等级: ${level}`);
-            }
+            console.log(`  实际移除: ${removed} 个数字（目标: ${cellsToRemove}）`);
+            console.log(`  耗时: ${(endTime - startTime).toFixed(2)}ms`);
 
             return puzzle;
         }
-        
-        // 生成对称位置列表（从中心向外扩展）
-        function generateSymmetricPositions() {
-            const positions = [];
-            const center = 40; // 中心位置
-            
-            // 添加所有位置，按与中心的距离排序（从内到外）
-            for (let i = 0; i < 81; i++) {
-                const row = Math.floor(i / 9);
-                const col = i % 9;
-                const centerRow = 4;
-                const centerCol = 4;
-                const distance = Math.abs(row - centerRow) + Math.abs(col - centerCol);
-                positions.push({ pos: i, distance });
-            }
-            
-            // 按距离排序，然后打乱同距离的位置
-            positions.sort((a, b) => {
-                if (a.distance !== b.distance) return a.distance - b.distance;
-                return Math.random() - 0.5; // 同距离随机排序
-            });
-            
-            return positions.map(p => p.pos);
-        }
-        
-        // 将一维数组转为二维数组
+
+        // 一维数组转二维数组
         function arrayToBoard(array) {
             const board = [];
             for (let i = 0; i < 9; i++) {
@@ -1504,67 +1516,43 @@
             }
             return board;
         }
-        
-        // 将二维数组转为一维数组
+
+        // 二维数组转一维数组
         function boardToArray(board) {
             return board.flat();
         }
-        
-        // 计算数独解的数量（用于验证唯一解）- 优化版本
-        function countSolutions(board, maxCount = 2) {
-            let count = 0;
-            let iterations = 0;
-            const maxIterations = 100000; // 防止无限递归
 
-            // 找到最优的空格（候选数最少的）
-            function findBestEmptyCell(board) {
-                let bestCell = null;
-                let minCandidates = 10;
-                
-                for (let row = 0; row < 9; row++) {
-                    for (let col = 0; col < 9; col++) {
-                        if (board[row][col] === 0) {
-                            let candidates = 0;
-                            for (let num = 1; num <= 9; num++) {
-                                if (isValid(board, row, col, num)) candidates++;
-                                if (candidates >= minCandidates) break; // 提前退出
-                            }
-                            if (candidates < minCandidates) {
-                                minCandidates = candidates;
-                                bestCell = { row, col };
-                                if (candidates === 1) break; // 最优情况
-                            }
-                        }
-                    }
-                    if (minCandidates === 1) break;
-                }
-                return bestCell;
-            }
+        // 计算解的数量（带限制，用于验证唯一解）
+        function countSolutionsWithLimit(board, maxCount = 2) {
+            let count = 0;
 
             function solve(board) {
                 if (count >= maxCount) return;
-                if (iterations++ > maxIterations) {
-                    console.warn('countSolutions: 达到最大迭代次数，可能解太多');
-                    count = maxCount + 1;
-                    return;
-                }
 
-                // 使用MRV启发式：找候选数最少的空格
-                const cell = findBestEmptyCell(board);
-                if (!cell) {
-                    count++;
-                    return;
-                }
-
-                const { row, col } = cell;
-                
-                for (let num = 1; num <= 9; num++) {
-                    if (isValid(board, row, col, num)) {
-                        board[row][col] = num;
-                        solve(board);
-                        board[row][col] = 0;
-                        if (count >= maxCount) return;
+                // 找到第一个空格
+                let found = false;
+                for (let row = 0; row < 9 && !found; row++) {
+                    for (let col = 0; col < 9 && !found; col++) {
+                        if (board[row][col] === 0) {
+                            found = true;
+                            
+                            // 尝试1-9
+                            for (let num = 1; num <= 9; num++) {
+                                if (isValidPlacement(board, row, col, num)) {
+                                    board[row][col] = num;
+                                    solve(board);
+                                    board[row][col] = 0;
+                                    if (count >= maxCount) return;
+                                }
+                            }
+                            return; // 没有数字可填，回溯
+                        }
                     }
+                }
+
+                // 没有找到空格，说明找到一个解
+                if (!found) {
+                    count++;
                 }
             }
 
@@ -1572,18 +1560,54 @@
             return count;
         }
 
-        // 验证数独谜题是否有唯一解
-        function hasUniqueSolution(puzzle) {
+        // 严格验证谜题（检查重复、解的存在性和唯一性）
+        function validatePuzzleStrict(puzzle) {
+            // 1. 检查是否有重复数字
+            const dup = findDuplicates(puzzle);
+            if (dup) {
+                return { 
+                    valid: false, 
+                    error: `第 ${dup.index + 1} ${dup.type === 'row' ? '行' : dup.type === 'col' ? '列' : '宫'}有重复数字`,
+                    unique: false,
+                    solutionCount: 0
+                };
+            }
+
+            // 2. 计算解的数量
             const board = arrayToBoard(puzzle);
-            const solutionCount = countSolutions(board);
-            return solutionCount === 1;
+            const solutionCount = countSolutionsWithLimit(board, 2);
+
+            if (solutionCount === 0) {
+                return { 
+                    valid: false, 
+                    error: '此谜题无解',
+                    unique: false,
+                    solutionCount: 0
+                };
+            }
+
+            if (solutionCount > 1) {
+                return { 
+                    valid: false, 
+                    error: `此谜题有 ${solutionCount} 个解，不是唯一解`,
+                    unique: false,
+                    solutionCount
+                };
+            }
+
+            return { 
+                valid: true, 
+                error: null,
+                unique: true,
+                solutionCount: 1
+            };
         }
 
-        // 验证数独盘面是否有重复数字
-        function hasDuplicates(puzzle) {
+        // 查找重复数字
+        function findDuplicates(puzzle) {
             const board = arrayToBoard(puzzle);
 
-            // 检查每行
+            // 检查行
             for (let row = 0; row < 9; row++) {
                 const seen = new Set();
                 for (let col = 0; col < 9; col++) {
@@ -1595,7 +1619,7 @@
                 }
             }
 
-            // 检查每列
+            // 检查列
             for (let col = 0; col < 9; col++) {
                 const seen = new Set();
                 for (let row = 0; row < 9; row++) {
@@ -1607,17 +1631,15 @@
                 }
             }
 
-            // 检查每个3x3宫
+            // 检查宫
             for (let boxRow = 0; boxRow < 3; boxRow++) {
                 for (let boxCol = 0; boxCol < 3; boxCol++) {
                     const seen = new Set();
                     for (let i = 0; i < 3; i++) {
                         for (let j = 0; j < 3; j++) {
-                            const row = boxRow * 3 + i;
-                            const col = boxCol * 3 + j;
-                            const num = board[row][col];
+                            const num = board[boxRow * 3 + i][boxCol * 3 + j];
                             if (num !== 0) {
-                                if (seen.has(num)) return { type: 'box', row: boxRow, col: boxCol };
+                                if (seen.has(num)) return { type: 'box', index: boxRow * 3 + boxCol };
                                 seen.add(num);
                             }
                         }
@@ -1628,152 +1650,179 @@
             return null;
         }
 
-        // 完整验证数独谜题 - 带详细调试信息
-        function validatePuzzle(puzzle) {
-            // 1. 检查是否有重复数字
-            const dup = hasDuplicates(puzzle);
-            if (dup) {
-                let errorMsg;
-                switch (dup.type) {
-                    case 'row': errorMsg = `第 ${dup.index + 1} 行有重复数字`; break;
-                    case 'col': errorMsg = `第 ${dup.index + 1} 列有重复数字`; break;
-                    case 'box': errorMsg = `第 ${dup.row * 3 + dup.col + 1} 个宫有重复数字`; break;
+        // ==================== 核心修复：实时校验 ====================
+
+        // 验证移动是否合法（实时校验）
+        function validateMove(cellIdx, num) {
+            if (num === 0) return { valid: true, error: null, type: null };
+            
+            const row = Math.floor(cellIdx / 9);
+            const col = cellIdx % 9;
+            
+            // 1. 检查行冲突
+            for (let c = 0; c < 9; c++) {
+                if (c !== col && grid[row * 9 + c] === num) {
+                    return { 
+                        valid: false, 
+                        error: `第 ${row + 1} 行已有数字 ${num}`,
+                        type: 'conflict'
+                    };
                 }
-                console.error(`验证失败: ${errorMsg}`);
-                return { valid: false, error: errorMsg, hasSolution: false, unique: false, solutionCount: 0 };
             }
-
-            // 2. 检查解的数量
-            const board = arrayToBoard(puzzle);
-            const solutionCount = countSolutions(board, 3); // 最多检查到3个解
-
-            // 统计空格数和提示数
-            const emptyCells = puzzle.filter(v => v === 0).length;
-            const clues = 81 - emptyCells;
-
-            if (solutionCount === 0) {
-                console.error(`验证失败: 无解 (空格: ${emptyCells}, 提示: ${clues})`);
-                return { valid: false, error: '此谜题无解', hasSolution: false, unique: false, solutionCount: 0 };
+            
+            // 2. 检查列冲突
+            for (let r = 0; r < 9; r++) {
+                if (r !== row && grid[r * 9 + col] === num) {
+                    return { 
+                        valid: false, 
+                        error: `第 ${col + 1} 列已有数字 ${num}`,
+                        type: 'conflict'
+                    };
+                }
             }
-
-            if (solutionCount > 1) {
-                console.error(`验证失败: ${solutionCount} 个解 (空格: ${emptyCells}, 提示: ${clues})`);
-                return { valid: false, error: `此谜题有 ${solutionCount} 个解，不是唯一解`, hasSolution: true, unique: false, solutionCount };
+            
+            // 3. 检查宫冲突
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let r = boxRow; r < boxRow + 3; r++) {
+                for (let c = boxCol; c < boxCol + 3; c++) {
+                    const idx = r * 9 + c;
+                    if (idx !== cellIdx && grid[idx] === num) {
+                        return { 
+                            valid: false, 
+                            error: `所在3x3宫内已有数字 ${num}`,
+                            type: 'conflict'
+                        };
+                    }
+                }
             }
-
-            console.log(`✓ 验证通过: 唯一解 (空格: ${emptyCells}, 提示: ${clues})`);
-            return { valid: true, error: null, hasSolution: true, unique: true, solutionCount: 1 };
+            
+            // 4. 检查唯一解（填入后是否仍保持唯一解）
+            // 只在非笔记模式下检查
+            if (!notesMode) {
+                const testGrid = [...grid];
+                testGrid[cellIdx] = num;
+                
+                const board = arrayToBoard(testGrid);
+                const solutionCount = countSolutionsWithLimit(board, 2);
+                
+                if (solutionCount === 0) {
+                    return { 
+                        valid: false, 
+                        error: '填入后导致无解，请重新考虑',
+                        type: 'uniqueness'
+                    };
+                }
+                
+                if (solutionCount > 1) {
+                    return { 
+                        valid: false, 
+                        error: '填入后导致多解，不符合标准数独规则',
+                        type: 'uniqueness'
+                    };
+                }
+            }
+            
+            return { valid: true, error: null, type: null };
         }
 
-        // 调试函数：验证当前谜题并输出详细信息到控制台
-        window.verifyCurrentPuzzle = function() {
-            console.log('\n╔═══════════════════════════════════════╗');
-            console.log('║      数独谜题唯一解验证工具            ║');
-            console.log('╚═══════════════════════════════════════╝\n');
-            
-            if (!grid || grid.length === 0) {
-                console.error('❌ 没有活动中的谜题！');
+        // 输入数字（带实时校验）
+        function inputNumber(num) {
+            if (selectedCell === null) {
+                showToast('请先选择一个格子', 'error');
                 return;
             }
             
-            console.log('当前谜题状态:');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            
-            // 打印美观的数独盘面
-            for (let row = 0; row < 9; row++) {
-                let rowStr = '';
-                for (let col = 0; col < 9; col++) {
-                    const val = grid[row * 9 + col];
-                    rowStr += val === 0 ? '· ' : val + ' ';
-                    if (col === 2 || col === 5) rowStr += '| ';
-                }
-                console.log(rowStr);
-                if (row === 2 || row === 5) console.log('───────┼───────┼───────');
+            if (fixedCells[selectedCell]) {
+                showToast('不能修改固定数字', 'error');
+                return;
             }
             
-            console.log('\n开始验证...');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            // 保存历史
+            history.push({
+                cell: selectedCell,
+                value: grid[selectedCell],
+                notes: new Set(notes[selectedCell])
+            });
+            if (history.length > 50) history.shift();
             
-            const startTime = performance.now();
-            const result = validatePuzzle(grid);
-            const elapsed = (performance.now() - startTime).toFixed(2);
-            
-            console.log('\n验证结果:');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log(`✓ 有效: ${result.valid ? '是 ✓' : '否 ✗'}`);
-            console.log(`✓ 有解: ${result.hasSolution ? '是 ✓' : '否 ✗'}`);
-            console.log(`✓ 唯一解: ${result.unique ? '是 ✓' : '否 ✗'}`);
-            console.log(`✓ 解数量: ${result.solutionCount}`);
-            console.log(`✓ 耗时: ${elapsed}ms`);
-            
-            if (result.error) {
-                console.log(`✗ 错误: ${result.error}`);
-            }
-            
-            // 统计信息
-            const emptyCount = grid.filter(v => v === 0).length;
-            const fixedCount = 81 - emptyCount;
-            console.log(`\n统计信息:`);
-            console.log(`✓ 空格数量: ${emptyCount}`);
-            console.log(`✓ 固定数字: ${fixedCount}`);
-            console.log(`✓ 难度: ${difficulty}`);
-            
-            console.log('\n╔═══════════════════════════════════════╗');
-            console.log(`║  结论: ${result.valid && result.unique ? '✅ 唯一解验证通过' : '❌ 验证未通过'}       ║`);
-            console.log('╚═══════════════════════════════════════╝\n');
-            
-            return result;
-        };
-        
-        // 调试函数：测试生成多个谜题，统计成功率
-        window.stressTestPuzzleGeneration = function(count = 10, level = 'hard') {
-            console.log(`\n╔══════════════════════════════════════════════════════╗`);
-            console.log(`║       压力测试: 生成 ${count} 个 ${level} 难度谜题         ║`);
-            console.log(`╚══════════════════════════════════════════════════════╝\n`);
-            
-            const results = {
-                success: 0,
-                failed: 0,
-                totalTime: 0,
-                avgEmptyCells: 0
-            };
-            
-            for (let i = 0; i < count; i++) {
-                console.log(`\n--- 测试 ${i + 1}/${count} ---`);
-                const startTime = performance.now();
-                
-                const sol = generateSolution();
-                const puzzle = createPuzzle(sol, level);
-                const validation = validatePuzzle(puzzle);
-                
-                const elapsed = performance.now() - startTime;
-                results.totalTime += elapsed;
-                
-                if (validation.valid && validation.unique) {
-                    results.success++;
-                    const emptyCells = puzzle.filter(v => v === 0).length;
-                    results.avgEmptyCells += emptyCells;
-                    console.log(`✓ 成功 (${elapsed.toFixed(0)}ms)`);
+            // 笔记模式
+            if (notesMode && num !== 0) {
+                const cellNotes = notes[selectedCell];
+                if (cellNotes.has(num)) {
+                    cellNotes.delete(num);
                 } else {
-                    results.failed++;
-                    console.log(`✗ 失败: ${validation.error} (${elapsed.toFixed(0)}ms)`);
+                    cellNotes.add(num);
                 }
+                renderGrid();
+                updateNumberPadHighlight();
+                return;
             }
             
-            console.log(`\n╔══════════════════════════════════════════════════════╗`);
-            console.log(`║                    测试结果统计                       ║`);
-            console.log(`╠══════════════════════════════════════════════════════╣`);
-            console.log(`║  成功率: ${((results.success / count) * 100).toFixed(1)}% (${results.success}/${count})                    ║`);
-            console.log(`║  失败率: ${((results.failed / count) * 100).toFixed(1)}% (${results.failed}/${count})                    ║`);
-            console.log(`║  平均耗时: ${(results.totalTime / count).toFixed(0)}ms                              ║`);
-            console.log(`║  总耗时: ${results.totalTime.toFixed(0)}ms                               ║`);
-            if (results.success > 0) {
-                console.log(`║  平均空格数: ${(results.avgEmptyCells / results.success).toFixed(1)}                          ║`);
+            // 删除数字
+            if (num === 0) {
+                grid[selectedCell] = 0;
+                errorCells.delete(selectedCell);
+                uniquenessErrorCells.delete(selectedCell);
+                renderGrid();
+                updateRemaining();
+                updateNumberRemaining();
+                return;
             }
-            console.log(`╚══════════════════════════════════════════════════════╝\n`);
             
-            return results;
-        };
+            // 实时校验
+            const validation = validateMove(selectedCell, num);
+            
+            if (!validation.valid) {
+                // 记录错误
+                errorCells.delete(selectedCell);
+                uniquenessErrorCells.delete(selectedCell);
+                
+                if (validation.type === 'conflict') {
+                    errorCells.add(selectedCell);
+                    showToast(`❌ ${validation.error}`, 'error');
+                } else if (validation.type === 'uniqueness') {
+                    uniquenessErrorCells.add(selectedCell);
+                    showToast(`⚠️ ${validation.error}`, 'warning');
+                }
+                
+                // 先填入数字，但标记为错误
+                grid[selectedCell] = num;
+                notes[selectedCell].clear();
+                clearRelatedNotes(selectedCell, num);
+                
+                renderGrid();
+                updateRemaining();
+                updateNumberRemaining();
+                
+                // 3秒后清除错误标记
+                setTimeout(() => {
+                    errorCells.delete(selectedCell);
+                    uniquenessErrorCells.delete(selectedCell);
+                    renderGrid();
+                }, 3000);
+                
+                return;
+            }
+            
+            // 校验通过，填入数字
+            errorCells.delete(selectedCell);
+            uniquenessErrorCells.delete(selectedCell);
+            grid[selectedCell] = num;
+            notes[selectedCell].clear();
+            clearRelatedNotes(selectedCell, num);
+            
+            renderGrid();
+            updateRemaining();
+            updateNumberRemaining();
+            updateNumberPadHighlight();
+            
+            // 检查是否完成
+            if (isComplete()) {
+                clearInterval(timerInterval);
+                showVictory();
+            }
+        }
 
         // 渲染网格
         function renderGrid() {
@@ -1786,6 +1835,16 @@
                 
                 cell.className = 'cell';
                 cell.innerHTML = '';
+                
+                // 错误标记
+                if (errorCells.has(idx)) {
+                    cell.classList.add('error');
+                }
+                
+                // 唯一解冲突标记
+                if (uniquenessErrorCells.has(idx)) {
+                    cell.classList.add('uniqueness-error');
+                }
                 
                 // 提示高亮
                 if (idx === hintCell) {
@@ -1811,7 +1870,6 @@
                         if (cellNotes.has(i)) {
                             span.textContent = i;
                             span.classList.add('has-note');
-                            // 如果选中了相同数字的格子，高亮笔记中的这个数字
                             if (selectedCell !== null && !notesMode && grid[selectedCell] !== 0 && grid[selectedCell] === i) {
                                 span.classList.add('same-number-note');
                             }
@@ -1823,8 +1881,51 @@
             });
             
             highlightCells();
-            markErrors();
             updateNumberPadHighlight();
+        }
+
+        // 高亮单元格
+        function highlightCells() {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach((cell, idx) => {
+                if (idx === selectedCell) {
+                    cell.classList.add('selected');
+                }
+                
+                if (selectedCell !== null) {
+                    const selectedRow = Math.floor(selectedCell / 9);
+                    const selectedCol = selectedCell % 9;
+                    const currentRow = Math.floor(idx / 9);
+                    const currentCol = idx % 9;
+                    
+                    const selectedBoxRow = Math.floor(selectedRow / 3);
+                    const selectedBoxCol = Math.floor(selectedCol / 3);
+                    const currentBoxRow = Math.floor(currentRow / 3);
+                    const currentBoxCol = Math.floor(currentCol / 3);
+                    const isSameBox = selectedBoxRow === currentBoxRow && selectedBoxCol === currentBoxCol;
+                    
+                    if (currentRow === selectedRow || currentCol === selectedCol || isSameBox) {
+                        cell.classList.add('highlight');
+                    }
+                    
+                    if (grid[idx] !== 0 && grid[idx] === grid[selectedCell] && !notesMode) {
+                        cell.classList.add('same-number');
+                    }
+                    
+                    if (!notesMode && grid[selectedCell] !== 0) {
+                        const notesDiv = cell.querySelector('.notes');
+                        if (notesDiv) {
+                            const noteSpans = notesDiv.querySelectorAll('span.has-note');
+                            noteSpans.forEach(span => {
+                                if (parseInt(span.textContent) === grid[selectedCell]) {
+                                    span.classList.add('same-number-note');
+                                }
+                            });
+                        }
+                    }
+                }
+            });
         }
 
         // 选择单元格
@@ -1901,12 +2002,10 @@
                     const num = parseInt(btn.dataset.num);
                     btn.classList.remove('unique-number', 'note-selected');
                     
-                    // 唯余法高亮
                     if (uniqueNum !== null && num === uniqueNum) {
                         btn.classList.add('unique-number');
                     }
                     
-                    // 笔记模式下，当前格子已有该笔记则显示红框
                     if (notesMode && selectedCell !== null && notes[selectedCell].has(num)) {
                         btn.classList.add('note-selected');
                     }
@@ -1916,108 +2015,7 @@
             }
         }
 
-        // 高亮单元格
-        function highlightCells() {
-            const cells = document.querySelectorAll('.cell');
-            
-            cells.forEach((cell, idx) => {
-                if (idx === selectedCell) {
-                    cell.classList.add('selected');
-                }
-                
-                if (selectedCell !== null) {
-                    const selectedRow = Math.floor(selectedCell / 9);
-                    const selectedCol = selectedCell % 9;
-                    const currentRow = Math.floor(idx / 9);
-                    const currentCol = idx % 9;
-                    
-                    // 计算宫的位置 (3x3区块)
-                    const selectedBoxRow = Math.floor(selectedRow / 3);
-                    const selectedBoxCol = Math.floor(selectedCol / 3);
-                    const currentBoxRow = Math.floor(currentRow / 3);
-                    const currentBoxCol = Math.floor(currentCol / 3);
-                    const isSameBox = selectedBoxRow === currentBoxRow && selectedBoxCol === currentBoxCol;
-                    
-                    // 高亮同行、同列、同宫
-                    if (currentRow === selectedRow || currentCol === selectedCol || isSameBox) {
-                        cell.classList.add('highlight');
-                    }
-                    
-                    // 被选数高亮（笔记模式下不高亮）
-                    if (grid[idx] !== 0 && grid[idx] === grid[selectedCell] && !notesMode) {
-                        cell.classList.add('same-number');
-                    }
-                    
-                    // 笔记中的相同数字也要高亮显示
-                    if (!notesMode && grid[selectedCell] !== 0) {
-                        const notesDiv = cell.querySelector('.notes');
-                        if (notesDiv) {
-                            const noteSpans = notesDiv.querySelectorAll('span.has-note');
-                            noteSpans.forEach(span => {
-                                if (parseInt(span.textContent) === grid[selectedCell]) {
-                                    span.classList.add('same-number-note');
-                                }
-                            });
-                        }
-                    }
-                }
-            });
-        }
-
-        // 标记错误 - 检查是否有重复数字
-        function markErrors() {
-            const cells = document.querySelectorAll('.cell');
-            
-            // 检查每个已填入的非固定数字
-            for (let i = 0; i < 81; i++) {
-                if (grid[i] === 0 || fixedCells[i]) continue;
-                
-                const row = Math.floor(i / 9);
-                const col = i % 9;
-                const num = grid[i];
-                let hasError = false;
-                
-                // 检查同行是否有相同数字
-                for (let c = 0; c < 9; c++) {
-                    if (c !== col && grid[row * 9 + c] === num) {
-                        hasError = true;
-                        break;
-                    }
-                }
-                
-                // 检查同列是否有相同数字
-                if (!hasError) {
-                    for (let r = 0; r < 9; r++) {
-                        if (r !== row && grid[r * 9 + col] === num) {
-                            hasError = true;
-                            break;
-                        }
-                    }
-                }
-                
-                // 检查同宫是否有相同数字
-                if (!hasError) {
-                    const boxRow = Math.floor(row / 3) * 3;
-                    const boxCol = Math.floor(col / 3) * 3;
-                    for (let r = boxRow; r < boxRow + 3; r++) {
-                        for (let c = boxCol; c < boxCol + 3; c++) {
-                            const idx = r * 9 + c;
-                            if (idx !== i && grid[idx] === num) {
-                                hasError = true;
-                                break;
-                            }
-                        }
-                        if (hasError) break;
-                    }
-                }
-                
-                if (hasError) {
-                    cells[i].classList.add('error');
-                }
-            }
-        }
-
-        // 清除相关笔记 - 当填入数字时，清除同行、同列、同宫内的该数字笔记
+        // 清除相关笔记
         function clearRelatedNotes(cellIdx, num) {
             if (num === 0) return;
             
@@ -2034,7 +2032,6 @@
                 const bRow = Math.floor(r / 3);
                 const bCol = Math.floor(c / 3);
                 
-                // 如果是同行、同列或同宫，且包含该数字的笔记
                 if ((r === row || c === col || (bRow === boxRow && bCol === boxCol)) && notes[i].has(num)) {
                     notes[i].delete(num);
                     cleared = true;
@@ -2042,47 +2039,6 @@
             }
             
             return cleared;
-        }
-
-        // 输入数字
-        function inputNumber(num) {
-            if (selectedCell === null || fixedCells[selectedCell]) {
-                showToast('请选择空白格子', 'error');
-                return;
-            }
-            
-            history.push({
-                cell: selectedCell,
-                value: grid[selectedCell],
-                notes: new Set(notes[selectedCell])
-            });
-            if (history.length > 50) history.shift();
-            
-            if (notesMode && num !== 0) {
-                const cellNotes = notes[selectedCell];
-                if (cellNotes.has(num)) {
-                    cellNotes.delete(num);
-                } else {
-                    cellNotes.add(num);
-                }
-            } else {
-                grid[selectedCell] = num;
-                if (num !== 0) {
-                    notes[selectedCell].clear();
-                    // 清除相关笔记
-                    clearRelatedNotes(selectedCell, num);
-                }
-            }
-            
-            renderGrid();
-            updateRemaining();
-            updateNumberRemaining();
-            updateNumberPadHighlight(); // 确保数字按钮状态更新
-            
-            if (isComplete()) {
-                clearInterval(timerInterval);
-                showVictory();
-            }
         }
 
         // 撤销
@@ -2095,6 +2051,8 @@
             const last = history.pop();
             grid[last.cell] = last.value;
             notes[last.cell] = last.notes;
+            errorCells.delete(last.cell);
+            uniquenessErrorCells.delete(last.cell);
             selectedCell = last.cell;
             renderGrid();
             updateRemaining();
@@ -2107,34 +2065,13 @@
             for (let i = 0; i < 81; i++) {
                 if (grid[i] === 0) return false;
             }
-            return isValidSolution();
+            return validateCompletion();
         }
 
-        // 验证解答 - 确保每行、每列、每个3x3宫都包含1-9且不重复
-        function isValidSolution() {
-            // 使用 validatePuzzle 进行完整验证
-            const validation = validatePuzzle(grid);
-
-            // 确保所有格子都已填入
-            const hasEmptyCells = grid.some(v => v === 0);
-            if (hasEmptyCells) return false;
-
-            return validation.valid;
-        }
-
-        // 检查当前谜题状态（用于调试）
-        function checkPuzzle() {
-            const validation = validatePuzzle(grid);
-
-            if (validation.valid) {
-                showToast('✅ 当前谜题有效且有唯一解', 'success');
-                console.log('谜题验证结果:', validation);
-            } else {
-                showToast(`❌ ${validation.error}`, 'error');
-                console.warn('谜题验证结果:', validation);
-            }
-
-            return validation;
+        // 验证完成状态
+        function validateCompletion() {
+            const validation = validatePuzzleStrict(grid);
+            return validation.valid && validation.unique;
         }
 
         // 更新剩余空格数
@@ -2158,7 +2095,7 @@
             }
         }
 
-        // 计算某个数字还差几个填满9个（数独规则：每行每列每宫各1-9）
+        // 计算某个数字还差几个填满9个
         function countRemainingForNumber(num) {
             const currentCount = grid.filter(v => v === num).length;
             return 9 - currentCount;
@@ -2188,12 +2125,14 @@
                 notes: new Set(notes[selectedCell])
             });
             
+            // 清除错误标记
+            errorCells.delete(selectedCell);
+            uniquenessErrorCells.delete(selectedCell);
+            
             grid[selectedCell] = solution[selectedCell];
             notes[selectedCell].clear();
-            // 清除相关笔记
             clearRelatedNotes(selectedCell, solution[selectedCell]);
             
-            // 设置提示高亮
             hintCell = selectedCell;
             
             renderGrid();
@@ -2201,28 +2140,23 @@
             updateNumberRemaining();
             showToast('💡 已填入提示', 'success');
             
-            // 3秒后移除高亮
             setTimeout(() => {
                 hintCell = null;
                 renderGrid();
             }, 3000);
         }
 
-        // 一键笔记：为所有空格计算可能的数字
+        // 一键笔记
         function autoNotes() {
             let filledCount = 0;
             
             for (let i = 0; i < 81; i++) {
-                // 只处理空格
                 if (grid[i] !== 0 || fixedCells[i]) continue;
                 
                 const row = Math.floor(i / 9);
                 const col = i % 9;
-                
-                // 获取当前格子可能的数字
                 const possibleNumbers = getPossibleNumbers(row, col);
                 
-                // 清空原有笔记，设置新笔记
                 notes[i].clear();
                 possibleNumbers.forEach(num => notes[i].add(num));
                 
@@ -2235,12 +2169,11 @@
             updateNumberPadHighlight();
             showToast(`📝 已为 ${filledCount} 个空格填充笔记`, 'success');
         }
-        
-        // 获取指定格子可能的数字（排除同行、同列、同宫已有的数字）
+
+        // 获取指定格子可能的数字
         function getPossibleNumbers(row, col) {
             const possible = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
             
-            // 排除同行已有的数字
             for (let c = 0; c < 9; c++) {
                 const idx = row * 9 + c;
                 if (grid[idx] !== 0) {
@@ -2248,7 +2181,6 @@
                 }
             }
             
-            // 排除同列已有的数字
             for (let r = 0; r < 9; r++) {
                 const idx = r * 9 + col;
                 if (grid[idx] !== 0) {
@@ -2256,7 +2188,6 @@
                 }
             }
             
-            // 排除同宫（3x3）已有的数字
             const boxRow = Math.floor(row / 3) * 3;
             const boxCol = Math.floor(col / 3) * 3;
             for (let r = boxRow; r < boxRow + 3; r++) {
@@ -2375,10 +2306,8 @@
             
             setTimeout(() => {
                 toast.classList.remove('show');
-            }, 2000);
+            }, 2500);
         }
-
-
 
         // 游戏导航菜单
         function toggleNav() {
@@ -2408,6 +2337,115 @@
             }
             lastTouchEnd = now;
         }, false);
+
+        // ==================== 调试工具 ====================
+
+        // 验证当前谜题
+        window.verifyCurrentPuzzle = function() {
+            console.log('\n╔═══════════════════════════════════════╗');
+            console.log('║      数独谜题唯一解验证工具            ║');
+            console.log('╚═══════════════════════════════════════╝\n');
+            
+            if (!grid || grid.length === 0) {
+                console.error('❌ 没有活动中的谜题！');
+                return;
+            }
+            
+            console.log('当前谜题状态:');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
+            for (let row = 0; row < 9; row++) {
+                let rowStr = '';
+                for (let col = 0; col < 9; col++) {
+                    const val = grid[row * 9 + col];
+                    rowStr += val === 0 ? '· ' : val + ' ';
+                    if (col === 2 || col === 5) rowStr += '| ';
+                }
+                console.log(rowStr);
+                if (row === 2 || row === 5) console.log('───────┼───────┼───────');
+            }
+            
+            console.log('\n开始验证...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
+            const startTime = performance.now();
+            const result = validatePuzzleStrict(grid);
+            const elapsed = (performance.now() - startTime).toFixed(2);
+            
+            console.log('\n验证结果:');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log(`✓ 有效: ${result.valid ? '是 ✓' : '否 ✗'}`);
+            console.log(`✓ 唯一解: ${result.unique ? '是 ✓' : '否 ✗'}`);
+            console.log(`✓ 解数量: ${result.solutionCount}`);
+            console.log(`✓ 耗时: ${elapsed}ms`);
+            
+            if (result.error) {
+                console.log(`✗ 错误: ${result.error}`);
+            }
+            
+            const emptyCount = grid.filter(v => v === 0).length;
+            const fixedCount = 81 - emptyCount;
+            console.log(`\n统计信息:`);
+            console.log(`✓ 空格数量: ${emptyCount}`);
+            console.log(`✓ 固定数字: ${fixedCount}`);
+            console.log(`✓ 难度: ${difficulty}`);
+            
+            console.log('\n╔═══════════════════════════════════════╗');
+            console.log(`║  结论: ${result.valid && result.unique ? '✅ 唯一解验证通过' : '❌ 验证未通过'}       ║`);
+            console.log('╚═══════════════════════════════════════╝\n');
+            
+            return result;
+        };
+
+        // 压力测试
+        window.stressTestPuzzleGeneration = function(count = 10, level = 'hard') {
+            console.log(`\n╔══════════════════════════════════════════════════════╗`);
+            console.log(`║       压力测试: 生成 ${count} 个 ${level} 难度谜题         ║`);
+            console.log(`╚══════════════════════════════════════════════════════╝\n`);
+            
+            const results = {
+                success: 0,
+                failed: 0,
+                totalTime: 0,
+                avgEmptyCells: 0
+            };
+            
+            for (let i = 0; i < count; i++) {
+                console.log(`\n--- 测试 ${i + 1}/${count} ---`);
+                const startTime = performance.now();
+                
+                const sol = generateCompleteBoard();
+                const puzzle = createPuzzleWithUniqueSolution(sol, level);
+                const validation = validatePuzzleStrict(puzzle);
+                
+                const elapsed = performance.now() - startTime;
+                results.totalTime += elapsed;
+                
+                if (validation.valid && validation.unique) {
+                    results.success++;
+                    const emptyCells = puzzle.filter(v => v === 0).length;
+                    results.avgEmptyCells += emptyCells;
+                    console.log(`✓ 成功 (${elapsed.toFixed(0)}ms)`);
+                } else {
+                    results.failed++;
+                    console.log(`✗ 失败: ${validation.error} (${elapsed.toFixed(0)}ms)`);
+                }
+            }
+            
+            console.log(`\n╔══════════════════════════════════════════════════════╗`);
+            console.log(`║                    测试结果统计                       ║`);
+            console.log(`╠══════════════════════════════════════════════════════╣`);
+            console.log(`║  成功率: ${((results.success / count) * 100).toFixed(1)}% (${results.success}/${count})                    ║`);
+            console.log(`║  失败率: ${((results.failed / count) * 100).toFixed(1)}% (${results.failed}/${count})                    ║`);
+            console.log(`║  平均耗时: ${(results.totalTime / count).toFixed(0)}ms                              ║`);
+            console.log(`║  总耗时: ${results.totalTime.toFixed(0)}ms                               ║`);
+            if (results.success > 0) {
+                console.log(`║  平均空格数: ${(results.avgEmptyCells / results.success).toFixed(1)}                          ║`);
+            }
+            console.log(`╚══════════════════════════════════════════════════════╝\n`);
+            
+            return results;
+        };
 
         // 启动
         init();
