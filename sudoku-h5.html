@@ -1253,18 +1253,37 @@
             seconds = 0;
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
-            
-            solution = generateSolution();
-            grid = createPuzzle(solution, difficulty);
-            fixedCells = grid.map((val, idx) => val !== 0);
-            
+
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            do {
+                solution = generateSolution();
+                grid = createPuzzle(solution, difficulty);
+                fixedCells = grid.map((val, idx) => val !== 0);
+
+                // 验证生成的谜题
+                const validation = validatePuzzle(grid);
+                if (validation.valid) {
+                    break; // 谜题有效，退出循环
+                }
+
+                console.warn(`谜题验证失败 (${attempts + 1}/${maxAttempts}): ${validation.error}`);
+                attempts++;
+
+                if (attempts >= maxAttempts) {
+                    showToast('⚠️ 生成有效谜题失败，请重试', 'error');
+                    return;
+                }
+            } while (attempts < maxAttempts);
+
             notes = Array(81).fill().map(() => new Set());
             history = [];
             notesMode = false;
             hintCell = null;
             updateNotesButton();
             updateNumberPad();
-            
+
             renderGrid();
             updateRemaining();
             updateNumberRemaining();
@@ -1333,7 +1352,7 @@
         function createPuzzle(solution, level) {
             const puzzle = [...solution];
             let cellsToRemove;
-            
+
             switch (level) {
                 case 'easy': cellsToRemove = 35; break;
                 case 'medium': cellsToRemove = 45; break;
@@ -1341,29 +1360,40 @@
                 case 'expert': cellsToRemove = 60; break;
                 default: cellsToRemove = 55;
             }
-            
+
             // 创建位置列表并打乱
             const positions = Array.from({length: 81}, (_, i) => i);
             shuffleArray(positions);
-            
+
             let removed = 0;
             for (let i = 0; i < positions.length && removed < cellsToRemove; i++) {
                 const pos = positions[i];
                 if (puzzle[pos] === 0) continue;
-                
+
                 const originalValue = puzzle[pos];
                 puzzle[pos] = 0;
-                
+
                 // 检查是否仍有唯一解
                 const board = arrayToBoard(puzzle);
-                if (countSolutions(board) === 1) {
+                const solutionCount = countSolutions(board);
+
+                if (solutionCount === 1) {
                     removed++;
                 } else {
                     // 恢复数字，保持唯一解
                     puzzle[pos] = originalValue;
+                    console.log(`位置 ${pos} 不能移除，会导致${solutionCount === 0 ? '无解' : '多解'}`);
                 }
             }
-            
+
+            // 最终验证
+            const validation = validatePuzzle(puzzle);
+            if (!validation.valid) {
+                console.warn('生成的谜题验证失败:', validation.error);
+            } else {
+                console.log(`✅ 成功生成唯一解谜题，移除了 ${removed} 个数字，剩余 ${81 - removed} 个提示`);
+            }
+
             return puzzle;
         }
         
@@ -1384,10 +1414,10 @@
         // 计算数独解的数量（用于验证唯一解）
         function countSolutions(board) {
             let count = 0;
-            
+
             function solve(board) {
                 if (count > 1) return; // 提前退出，不需要知道所有解
-                
+
                 for (let row = 0; row < 9; row++) {
                     for (let col = 0; col < 9; col++) {
                         if (board[row][col] === 0) {
@@ -1405,9 +1435,94 @@
                 }
                 count++;
             }
-            
+
             solve(board);
             return count;
+        }
+
+        // 验证数独谜题是否有唯一解
+        function hasUniqueSolution(puzzle) {
+            const board = arrayToBoard(puzzle);
+            const solutionCount = countSolutions(board);
+            return solutionCount === 1;
+        }
+
+        // 验证数独盘面是否有重复数字
+        function hasDuplicates(puzzle) {
+            const board = arrayToBoard(puzzle);
+
+            // 检查每行
+            for (let row = 0; row < 9; row++) {
+                const seen = new Set();
+                for (let col = 0; col < 9; col++) {
+                    const num = board[row][col];
+                    if (num !== 0) {
+                        if (seen.has(num)) return { type: 'row', index: row };
+                        seen.add(num);
+                    }
+                }
+            }
+
+            // 检查每列
+            for (let col = 0; col < 9; col++) {
+                const seen = new Set();
+                for (let row = 0; row < 9; row++) {
+                    const num = board[row][col];
+                    if (num !== 0) {
+                        if (seen.has(num)) return { type: 'col', index: col };
+                        seen.add(num);
+                    }
+                }
+            }
+
+            // 检查每个3x3宫
+            for (let boxRow = 0; boxRow < 3; boxRow++) {
+                for (let boxCol = 0; boxCol < 3; boxCol++) {
+                    const seen = new Set();
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            const row = boxRow * 3 + i;
+                            const col = boxCol * 3 + j;
+                            const num = board[row][col];
+                            if (num !== 0) {
+                                if (seen.has(num)) return { type: 'box', row: boxRow, col: boxCol };
+                                seen.add(num);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // 完整验证数独谜题
+        function validatePuzzle(puzzle) {
+            // 1. 检查是否有重复数字
+            const dup = hasDuplicates(puzzle);
+            if (dup) {
+                let errorMsg;
+                switch (dup.type) {
+                    case 'row': errorMsg = `第 ${dup.index + 1} 行有重复数字`; break;
+                    case 'col': errorMsg = `第 ${dup.index + 1} 列有重复数字`; break;
+                    case 'box': errorMsg = `第 ${dup.row * 3 + dup.col + 1} 个宫有重复数字`; break;
+                }
+                return { valid: false, error: errorMsg, hasSolution: false, unique: false };
+            }
+
+            // 2. 检查是否有解
+            const board = arrayToBoard(puzzle);
+            const solutionCount = countSolutions(board);
+
+            if (solutionCount === 0) {
+                return { valid: false, error: '此谜题无解', hasSolution: false, unique: false };
+            }
+
+            if (solutionCount > 1) {
+                return { valid: false, error: `此谜题有 ${solutionCount} 个解，不是唯一解`, hasSolution: true, unique: false };
+            }
+
+            return { valid: true, error: null, hasSolution: true, unique: true };
         }
 
         // 渲染网格
@@ -1747,48 +1862,29 @@
 
         // 验证解答 - 确保每行、每列、每个3x3宫都包含1-9且不重复
         function isValidSolution() {
-            // 检查是否有空格
-            for (let i = 0; i < 81; i++) {
-                if (grid[i] === 0) return false;
+            // 使用 validatePuzzle 进行完整验证
+            const validation = validatePuzzle(grid);
+
+            // 确保所有格子都已填入
+            const hasEmptyCells = grid.some(v => v === 0);
+            if (hasEmptyCells) return false;
+
+            return validation.valid;
+        }
+
+        // 检查当前谜题状态（用于调试）
+        function checkPuzzle() {
+            const validation = validatePuzzle(grid);
+
+            if (validation.valid) {
+                showToast('✅ 当前谜题有效且有唯一解', 'success');
+                console.log('谜题验证结果:', validation);
+            } else {
+                showToast(`❌ ${validation.error}`, 'error');
+                console.warn('谜题验证结果:', validation);
             }
-            
-            // 检查每行
-            for (let row = 0; row < 9; row++) {
-                const rowSet = new Set();
-                for (let col = 0; col < 9; col++) {
-                    const num = grid[row * 9 + col];
-                    if (num < 1 || num > 9 || rowSet.has(num)) return false;
-                    rowSet.add(num);
-                }
-            }
-            
-            // 检查每列
-            for (let col = 0; col < 9; col++) {
-                const colSet = new Set();
-                for (let row = 0; row < 9; row++) {
-                    const num = grid[row * 9 + col];
-                    if (num < 1 || num > 9 || colSet.has(num)) return false;
-                    colSet.add(num);
-                }
-            }
-            
-            // 检查每个3x3宫
-            for (let boxRow = 0; boxRow < 3; boxRow++) {
-                for (let boxCol = 0; boxCol < 3; boxCol++) {
-                    const boxSet = new Set();
-                    for (let i = 0; i < 3; i++) {
-                        for (let j = 0; j < 3; j++) {
-                            const row = boxRow * 3 + i;
-                            const col = boxCol * 3 + j;
-                            const num = grid[row * 9 + col];
-                            if (num < 1 || num > 9 || boxSet.has(num)) return false;
-                            boxSet.add(num);
-                        }
-                    }
-                }
-            }
-            
-            return true;
+
+            return validation;
         }
 
         // 更新剩余空格数
