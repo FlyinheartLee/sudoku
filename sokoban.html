@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#84cc16">
     <title>推箱子 - Sokoban</title>
+    <script src="best-record.js"></script>
     <style>
         :root {
             --primary: #84cc16;
@@ -628,8 +629,12 @@
             <span class="stat-value" id="step-count">0</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">完成</span>
-            <span class="stat-value" id="completed">0/3</span>
+            <span class="stat-label">时间</span>
+            <span class="stat-value" id="time-count">00:00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">最佳纪录</span>
+            <span class="stat-value" id="best-record" style="font-size: 0.85rem;">-</span>
         </div>
     </div>
 
@@ -788,6 +793,8 @@
         let playerPos = { x: 0, y: 0 };
         let stepCount = 0;
         let history = [];
+        let startTime = null;
+        let timerInterval = null;
 
         function init() {
             generateLevelOptions();
@@ -816,10 +823,13 @@
             const level = LEVELS[levelIdx];
             stepCount = 0;
             history = [];
-            
+            startTime = Date.now();
+
             document.getElementById('level-badge').textContent = `第${levelIdx + 1}关`;
             document.getElementById('level-num').textContent = levelIdx + 1;
             document.getElementById('step-count').textContent = 0;
+            updateBestRecord();
+            startTimer();
             
             // 解析地图
             grid = [];
@@ -845,6 +855,34 @@
             
             renderGrid();
             updateCompleted();
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const secs = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('time-count').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function updateBestRecord() {
+            const record = gameRecords.getRecord(`sokoban_level${currentLevel + 1}`);
+            const el = document.getElementById('best-record');
+            if (record && (record.bestTime || record.bestSteps)) {
+                const parts = [];
+                if (record.bestSteps) parts.push(`${record.bestSteps}步`);
+                if (record.bestTime) {
+                    const secs = Math.floor(record.bestTime / 1000);
+                    const mins = Math.floor(secs / 60);
+                    const s = secs % 60;
+                    parts.push(`${mins}:${s.toString().padStart(2, '0')}`);
+                }
+                el.textContent = parts.join(' / ');
+            } else {
+                el.textContent = '无纪录';
+            }
         }
 
         function renderGrid() {
@@ -986,12 +1024,28 @@
 
         function resetLevel() {
             loadLevel(currentLevel);
+            updateBestRecord();
             showToast('已重置', 'success');
         }
 
         function showVictory() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            const elapsed = Date.now() - startTime;
             document.getElementById('victory-steps').textContent = stepCount;
             document.getElementById('victory-modal').classList.add('show');
+
+            // 记录最佳成绩
+            const result = gameRecords.record('sokoban', {
+                time: elapsed,
+                steps: stepCount,
+                difficulty: `level${currentLevel + 1}`
+            });
+
+            // 刷新最佳纪录显示
+            setTimeout(updateBestRecord, 600);
         }
 
         function closeVictory() {
@@ -1006,6 +1060,7 @@
                 showToast('恭喜！你已完成所有关卡！', 'success');
                 loadLevel(0);
             }
+            updateBestRecord();
         }
 
         function showLevelModal() {
@@ -1022,11 +1077,28 @@
             document.querySelectorAll('.level-option').forEach((opt, idx) => {
                 opt.classList.toggle('selected', idx === level);
             });
+            // 预览最佳纪录
+            const record = gameRecords.getRecord(`sokoban_level${currentLevel + 1}`);
+            const el = document.getElementById('best-record');
+            if (record && (record.bestTime || record.bestSteps)) {
+                const parts = [];
+                if (record.bestSteps) parts.push(`${record.bestSteps}步`);
+                if (record.bestTime) {
+                    const secs = Math.floor(record.bestTime / 1000);
+                    const mins = Math.floor(secs / 60);
+                    const s = secs % 60;
+                    parts.push(`${mins}:${s.toString().padStart(2, '0')}`);
+                }
+                el.textContent = parts.join(' / ');
+            } else {
+                el.textContent = '无纪录';
+            }
         }
 
         function startGame() {
             closeLevelModal();
             loadLevel(currentLevel);
+            updateBestRecord();
             showToast('🎮 新游戏开始！', 'success');
         }
 

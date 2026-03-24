@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#ec4899">
     <title>华容道 - 经典滑块拼图</title>
+    <script src="best-record.js"></script>
     <style>
         :root {
             --primary: #ec4899;
@@ -550,8 +551,12 @@
             <span class="stat-value" id="step-count">0</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">目标</span>
-            <span class="stat-value" id="target-text">出出口</span>
+            <span class="stat-label">时间</span>
+            <span class="stat-value" id="time-count">00:00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">最佳纪录</span>
+            <span class="stat-value" id="best-record" style="font-size: 0.9rem;">-</span>
         </div>
     </div>
 
@@ -689,6 +694,8 @@
         let blocks = [];
         let selectedLevel = 'classic';
         let stepCount = 0;
+        let startTime = null;
+        let timerInterval = null;
 
         function init() {
             loadLevel(selectedLevel);
@@ -699,8 +706,39 @@
             const level = LEVELS[levelKey];
             blocks = level.blocks.map(b => ({...b}));
             stepCount = 0;
+            startTime = Date.now();
             updateStats();
+            updateBestRecord();
+            startTimer();
             document.getElementById('level-badge').textContent = level.name;
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const secs = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('time-count').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function updateBestRecord() {
+            const record = gameRecords.getRecord(`klotski_${selectedLevel}`);
+            const el = document.getElementById('best-record');
+            if (record && (record.bestTime || record.bestSteps)) {
+                const parts = [];
+                if (record.bestSteps) parts.push(`${record.bestSteps}步`);
+                if (record.bestTime) {
+                    const secs = Math.floor(record.bestTime / 1000);
+                    const mins = Math.floor(secs / 60);
+                    const s = secs % 60;
+                    parts.push(`${mins}:${s.toString().padStart(2, '0')}`);
+                }
+                el.textContent = parts.join(' / ');
+            } else {
+                el.textContent = '无纪录';
+            }
         }
 
         function renderGrid() {
@@ -847,12 +885,28 @@
         function resetLevel() {
             loadLevel(selectedLevel);
             renderGrid();
+            updateBestRecord();
             showToast('已重置', 'success');
         }
 
         function showVictory() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            const elapsed = Date.now() - startTime;
             document.getElementById('victory-steps').textContent = stepCount;
             document.getElementById('victory-modal').classList.add('show');
+            
+            // 记录最佳成绩
+            const result = gameRecords.record('klotski', {
+                time: elapsed,
+                steps: stepCount,
+                difficulty: selectedLevel
+            });
+            
+            // 刷新最佳纪录显示
+            setTimeout(updateBestRecord, 600);
         }
 
         function closeVictory() {
@@ -870,6 +924,7 @@
             }
             loadLevel(selectedLevel);
             renderGrid();
+            updateBestRecord();
         }
 
         function showLevelModal() {
@@ -885,12 +940,29 @@
             document.querySelectorAll('.level-option').forEach(opt => {
                 opt.classList.toggle('selected', opt.dataset.level === level);
             });
+            // 预览最佳纪录
+            const record = gameRecords.getRecord(`klotski_${selectedLevel}`);
+            const el = document.getElementById('best-record');
+            if (record && (record.bestTime || record.bestSteps)) {
+                const parts = [];
+                if (record.bestSteps) parts.push(`${record.bestSteps}步`);
+                if (record.bestTime) {
+                    const secs = Math.floor(record.bestTime / 1000);
+                    const mins = Math.floor(secs / 60);
+                    const s = secs % 60;
+                    parts.push(`${mins}:${s.toString().padStart(2, '0')}`);
+                }
+                el.textContent = parts.join(' / ');
+            } else {
+                el.textContent = '无纪录';
+            }
         }
 
         function startGame() {
             closeLevelModal();
             loadLevel(selectedLevel);
             renderGrid();
+            updateBestRecord();
             showToast('🎮 新游戏开始！', 'success');
         }
 
