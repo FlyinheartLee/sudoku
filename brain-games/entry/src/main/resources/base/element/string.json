@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "脑力训练 - 10款经典益智游戏合集"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "脑力训练主入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "脑力训练"
+    },
+    {
+      "name": "internet_permission_reason",
+      "value": "应用需要访问网络以加载H5游戏内容"
+    }
+  ]
+}

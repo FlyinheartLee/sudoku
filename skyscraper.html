@@ -166,6 +166,36 @@
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
+        .best-record-display {
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(167, 243, 208, 0.9) 0%, rgba(207, 250, 254, 0.9) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 8px 16px;
+            margin: 8px 16px;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            font-size: 0.75rem;
+            color: #065f46;
+        }
+
+        .best-record-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .best-record-item .label {
+            font-weight: 600;
+        }
+
+        .best-record-item .value {
+            font-weight: 800;
+            color: #059669;
+        }
+
         .game-area {
             flex: 1;
             display: flex;
@@ -552,6 +582,7 @@
             background: var(--primary-light);
         }
     </style>
+    <script src="best-record.js"></script>
 </head>
 <body>
     <div class="game-nav">
@@ -594,6 +625,13 @@
         <div class="stat-item">
             <span class="stat-label">难度</span>
             <span class="stat-value" id="difficulty-text">简单</span>
+        </div>
+    </div>
+
+    <div class="best-record-display" id="best-record-display">
+        <div class="best-record-item">
+            <span class="label">🏆 最佳时间:</span>
+            <span class="value" id="best-time">--</span>
         </div>
     </div>
 
@@ -694,6 +732,8 @@
         let selectedCell = null;
         let selectedLevel = 5;
         let history = [];
+        let gameStartTime = null; // 游戏开始时间
+        let gameTimeElapsed = 0; // 游戏用时(毫秒)
 
         function init() {
             createGrid();
@@ -702,6 +742,29 @@
             renderHints();
             createNumberPad();
             updateStats();
+            updateBestRecordDisplay();
+        }
+
+        // 更新最佳记录显示
+        function updateBestRecordDisplay() {
+            const difficulty = gridSize === 4 ? 'easy' : gridSize === 5 ? 'medium' : 'hard';
+            const gameKey = `skyscraper_${difficulty}`;
+            const record = gameRecords.getRecord(gameKey);
+
+            const bestTimeEl = document.getElementById('best-time');
+
+            if (record && record.bestTime) {
+                bestTimeEl.textContent = gameRecords.formatTime(record.bestTime);
+            } else {
+                bestTimeEl.textContent = '--';
+            }
+        }
+
+        // 获取难度名称
+        function getDifficultyName() {
+            if (gridSize === 4) return 'easy';
+            if (gridSize === 5) return 'medium';
+            return 'hard';
         }
 
         function createGrid() {
@@ -792,7 +855,8 @@
         function generatePuzzle() {
             solution = generateSolution();
             grid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
-            
+            gameStartTime = Date.now(); // 记录游戏开始时间
+
             // 计算边缘提示
             topHints = [];
             bottomHints = [];
@@ -1067,7 +1131,44 @@
         }
 
         function showVictory() {
+            // 计算游戏用时
+            gameTimeElapsed = Date.now() - gameStartTime;
+
+            // 记录成绩 (摩天楼只记录时间)
+            const difficulty = getDifficultyName();
+            const result = gameRecords.record('skyscraper', {
+                time: gameTimeElapsed,
+                difficulty: difficulty
+            });
+
+            // 更新最佳记录显示
+            updateBestRecordDisplay();
+
+            // 显示胜利弹窗
             document.getElementById('victory-size').textContent = `${gridSize}×${gridSize}`;
+
+            // 添加记录信息到弹窗
+            let recordInfo = '';
+            if (result.timeRecord.isNewRecord) {
+                const prevTime = result.timeRecord.previous;
+                const prevStr = prevTime ? gameRecords.formatTime(prevTime) : '无';
+                recordInfo += `<p style="color: #059669; font-weight: 700; margin: 8px 0;">🎉 打破纪录！用时 ${gameRecords.formatTime(gameTimeElapsed)} (之前: ${prevStr})</p>`;
+            } else {
+                recordInfo += `<p style="color: #047857; margin: 8px 0;">⏱️ 用时 ${gameRecords.formatTime(gameTimeElapsed)}</p>`;
+            }
+
+            const victoryModal = document.querySelector('.victory-modal');
+            const existingRecordInfo = victoryModal.querySelector('.record-info');
+            if (existingRecordInfo) {
+                existingRecordInfo.remove();
+            }
+            if (recordInfo) {
+                const recordDiv = document.createElement('div');
+                recordDiv.className = 'record-info';
+                recordDiv.innerHTML = recordInfo;
+                victoryModal.insertBefore(recordDiv, victoryModal.querySelector('.modal-actions'));
+            }
+
             document.getElementById('victory-modal').classList.add('show');
         }
 
@@ -1098,14 +1199,15 @@
 
         function startGame() {
             gridSize = selectedLevel;
-            
+
             const labels = { 4: '4×4', 5: '5×5', 6: '6×6' };
             const diffLabels = { 4: '简单', 5: '进阶', 6: '困难' };
             document.getElementById('level-badge').textContent = labels[gridSize];
             document.getElementById('difficulty-text').textContent = diffLabels[gridSize];
-            
+
             closeLevelModal();
             init();
+            updateBestRecordDisplay(); // 更新最佳记录显示
             showToast('🎮 新游戏开始！', 'success');
         }
 

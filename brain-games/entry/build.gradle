@@ -1,0 +1,21 @@
+apply plugin: 'com.huawei.ohos.hap'
+
+ohos {
+    compileSdkVersion 12
+    defaultConfig {
+        compatibleSdkVersion 11
+    }
+    
+    signingConfigs {
+        debug {
+            // 调试签名配置
+        }
+        release {
+            // 发布签名配置
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar', '*.har'])
+}
