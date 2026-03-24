@@ -8,6 +8,7 @@
     <meta name="theme-color" content="#3b82f6">
     <meta name="description" content="精美数桥游戏 - 连接所有岛屿的智慧挑战">
     <title>数桥 Master</title>
+    <script src="best-record.js"></script>
     
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIuWvj+acnyBNYXN0ZXIiLCAic2hvcnRfbmFtZSI6ICLlr4/mlq8iLCAic3RhcnRfdXJsIjogIi4iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzNiODJmNiIsICJ0aGVtZV9jb2xvciI6ICIjM2I4MmY2In0=">
     
@@ -821,6 +822,14 @@
         </div>
     </div>
 
+    <!-- 最佳记录显示区域 -->
+    <div id="best-record-display" style="position: relative; z-index: 10; display: flex; justify-content: center; padding: 4px 16px;">
+        <div class="stat-card" style="padding: 4px 14px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(251, 191, 36, 0.05)); border-color: rgba(245, 158, 11, 0.25);">
+            <span class="stat-label" style="color: #fbbf24;">🏆 最佳时间</span>
+            <span class="stat-value" id="best-time" style="color: #fbbf24; font-size: 0.95rem;">--</span>
+        </div>
+    </div>
+
     <!-- 提示文字 -->
     <div class="hint-text">
         点击两个岛屿之间建桥 · <span>单击</span>=1座 · <span>双击</span>=2座
@@ -942,6 +951,9 @@
             seconds = 0;
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
+
+            // 更新最佳记录显示
+            updateBestRecordDisplay();
 
             const config = DIFFICULTY_CONFIG[difficulty];
             rows = config.rows;
@@ -1439,11 +1451,39 @@
             document.getElementById('rules-modal').classList.remove('show');
         }
 
+        // 更新最佳记录显示
+        function updateBestRecordDisplay() {
+            const record = gameRecords.getRecord(`hashi_${difficulty}`);
+            if (record && record.bestTime) {
+                document.getElementById('best-time').textContent = formatTime(record.bestTime);
+            } else {
+                document.getElementById('best-time').textContent = '--';
+            }
+        }
+
+        // 格式化时间
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const secs = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
         // 胜利弹窗
         function showVictory() {
             const mins = Math.floor((seconds - 1) / 60).toString().padStart(2, '0');
             const secs = ((seconds - 1) % 60).toString().padStart(2, '0');
             document.getElementById('victory-time').textContent = `${mins}:${secs}`;
+
+            // 记录成绩（只记录时间）
+            if (typeof gameRecords !== 'undefined') {
+                const timeUsed = (seconds - 1) * 1000; // 转换为毫秒
+                gameRecords.record('hashi', {
+                    time: timeUsed,
+                    difficulty: difficulty
+                });
+            }
+
             document.getElementById('victory-modal').classList.add('show');
         }
 

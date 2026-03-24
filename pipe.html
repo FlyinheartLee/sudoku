@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#06b6d4">
     <title>接水管 - Pipe Puzzle</title>
+    <script src="best-record.js"></script>
     <style>
         :root {
             --primary: #06b6d4;
@@ -642,6 +643,18 @@
         </div>
     </div>
 
+    <!-- 最佳记录显示区域 -->
+    <div id="best-record-display" style="position: relative; z-index: 10; display: flex; justify-content: center; gap: 15px; padding: 5px 16px; margin-top: -5px;">
+        <div class="stat-card" style="padding: 6px 16px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.1)); border-color: rgba(245, 158, 11, 0.3);">
+            <span class="stat-label" style="color: #fbbf24;">🏆 最佳时间</span>
+            <span class="stat-value" id="best-time" style="color: #fbbf24; font-size: 1rem;">--</span>
+        </div>
+        <div class="stat-card" style="padding: 6px 16px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(52, 211, 153, 0.1)); border-color: rgba(16, 185, 129, 0.3);">
+            <span class="stat-label" style="color: #34d399;">🎯 最佳步数</span>
+            <span class="stat-value" id="best-steps" style="color: #34d399; font-size: 1rem;">--</span>
+        </div>
+    </div>
+
     <div class="game-area">
         <div class="grid-container">
             <div class="game-grid" id="grid"></div>
@@ -725,6 +738,8 @@
         let grid = [];
         let clickCount = 0;
         let gameWon = false;
+        let gameStartTime = 0;
+        let currentDifficulty = 'easy';
 
         function init() {
             generateLevelOptions();
@@ -753,14 +768,48 @@
             const level = LEVELS[levelIdx];
             clickCount = 0;
             gameWon = false;
-            
+            gameStartTime = Date.now();
+
+            // 根据关卡设置难度
+            if (levelIdx < 2) currentDifficulty = 'easy';
+            else if (levelIdx < 4) currentDifficulty = 'medium';
+            else currentDifficulty = 'hard';
+
             document.getElementById('level-badge').textContent = `第${levelIdx + 1}关`;
             document.getElementById('level-num').textContent = levelIdx + 1;
             document.getElementById('click-count').textContent = 0;
-            
+
+            // 更新最佳记录显示
+            updateBestRecordDisplay();
+
             // 生成随机管道网格
             generateGrid(level.size, level.source, level.target);
             renderGrid();
+        }
+
+        // 更新最佳记录显示
+        function updateBestRecordDisplay() {
+            const record = gameRecords.getRecord(`pipe_${currentDifficulty}`);
+            if (record) {
+                const timeStr = record.bestTime ? formatTime(record.bestTime) : '--';
+                const stepsStr = record.bestSteps ? record.bestSteps + '步' : '--';
+                document.getElementById('best-time').textContent = timeStr;
+                document.getElementById('best-steps').textContent = stepsStr;
+            } else {
+                document.getElementById('best-time').textContent = '--';
+                document.getElementById('best-steps').textContent = '--';
+            }
+        }
+
+        // 格式化时间
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            if (mins > 0) {
+                return `${mins}分${secs}秒`;
+            }
+            return `${secs}秒`;
         }
 
         function generateGrid(size, source, target) {
@@ -995,6 +1044,18 @@
         }
 
         function showVictory() {
+            // 计算用时
+            const timeUsed = Date.now() - gameStartTime;
+
+            // 记录成绩
+            if (typeof gameRecords !== 'undefined') {
+                gameRecords.record('pipe', {
+                    time: timeUsed,
+                    steps: clickCount,
+                    difficulty: currentDifficulty
+                });
+            }
+
             document.getElementById('victory-modal').classList.add('show');
         }
 
