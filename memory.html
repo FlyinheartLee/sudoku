@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#f97316">
     <title>记忆翻牌 - Memory Game</title>
+    <script src="best-record.js"></script>
     <style>
         :root {
             --primary: #f97316;
@@ -227,6 +228,47 @@
 
         .stat-value.timer {
             color: #fbbf24;
+        }
+
+        /* 最佳记录显示区域 */
+        .best-record-bar {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 6px 16px;
+            background: rgba(251, 191, 36, 0.15);
+            border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        .best-record-card {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 12px;
+            padding: 4px 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .best-record-card .stat-label {
+            font-size: 0.6rem;
+            color: #fbbf24;
+            text-transform: uppercase;
+        }
+
+        .best-record-card .stat-value {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fbbf24;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .best-record-card.no-record .stat-value {
+            color: #fed7aa;
+            font-weight: 400;
         }
 
         .game-area {
@@ -576,6 +618,18 @@
         <div class="theme-badge" id="theme-badge">Emoji</div>
     </div>
 
+    <!-- 最佳记录显示 -->
+    <div class="best-record-bar" id="best-record-bar">
+        <div class="best-record-card" id="best-record-time">
+            <span class="stat-label">🏆 时间</span>
+            <span class="stat-value" id="best-time-value">--</span>
+        </div>
+        <div class="best-record-card" id="best-record-steps">
+            <span class="stat-label">🏆 步数</span>
+            <span class="stat-value" id="best-steps-value">--</span>
+        </div>
+    </div>
+
     <div class="stats-bar">
         <div class="stat-card">
             <span class="stat-label">⏱️ 时间</span>
@@ -669,6 +723,37 @@
 
         function init() {
             newGame();
+            updateBestRecordDisplay();
+        }
+
+        // 更新最佳记录显示
+        function updateBestRecordDisplay() {
+            if (typeof gameRecords === 'undefined') return;
+
+            const gridKey = `${gridSize.cols}x${gridSize.rows}`;
+            const gameKey = `memory_${gridKey}`;
+            const record = gameRecords.getRecord(gameKey);
+
+            const timeCard = document.getElementById('best-record-time');
+            const stepsCard = document.getElementById('best-record-steps');
+            const timeValue = document.getElementById('best-time-value');
+            const stepsValue = document.getElementById('best-steps-value');
+
+            if (record && record.bestTime) {
+                timeCard.classList.remove('no-record');
+                timeValue.textContent = gameRecords.formatTime(record.bestTime);
+            } else {
+                timeCard.classList.add('no-record');
+                timeValue.textContent = '暂无';
+            }
+
+            if (record && record.bestSteps) {
+                stepsCard.classList.remove('no-record');
+                stepsValue.textContent = record.bestSteps + '步';
+            } else {
+                stepsCard.classList.add('no-record');
+                stepsValue.textContent = '暂无';
+            }
         }
 
         function newGame() {
@@ -779,6 +864,12 @@
                         // 检查胜利
                         if (matchedPairs === cards.length / 2) {
                             clearInterval(timerInterval);
+                            // 记录最佳成绩
+                            const gameTime = seconds * 1000; // 转换为毫秒
+                            const gridKey = `${gridSize.cols}x${gridSize.rows}`;
+                            if (typeof gameRecords !== 'undefined') {
+                                gameRecords.record('memory', { time: gameTime, steps: moves, difficulty: gridKey });
+                            }
                             setTimeout(showVictory, 500);
                         }
                     }, 500);
@@ -836,6 +927,7 @@
         function applySettings() {
             closeSettingsModal();
             newGame();
+            updateBestRecordDisplay();
             showToast('设置已应用', 'success');
         }
 
