@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#8b5cf6">
     <title>2048 - 经典益智游戏</title>
+    <script src="best-record.js"></script>
     <style>
         :root {
             --primary: #8b5cf6;
@@ -534,6 +535,14 @@
             <span class="stat-label">最高分</span>
             <span class="stat-value" id="best-score">0</span>
         </div>
+        <div class="stat-card">
+            <span class="stat-label">步数</span>
+            <span class="stat-value" id="steps">0</span>
+        </div>
+        <div class="stat-card" id="best-record-card" style="display: none;">
+            <span class="stat-label">🏆最佳</span>
+            <span class="stat-value" id="best-record">--</span>
+        </div>
     </div>
 
     <div class="game-area">
@@ -583,6 +592,7 @@
     <script>
         let grid = Array(4).fill().map(() => Array(4).fill(0));
         let score = 0;
+        let steps = 0;
         let bestScore = localStorage.getItem('2048-best') || 0;
         let history = [];
         let hasWon = false;
@@ -612,9 +622,12 @@
         function newGame() {
             grid = Array(4).fill().map(() => Array(4).fill(0));
             score = 0;
+            steps = 0;
             hasWon = false;
             history = [];
             updateScore();
+            updateSteps();
+            updateBestRecord();
             addRandomTile();
             addRandomTile();
             renderGrid();
@@ -750,10 +763,12 @@
             
             if (moved) {
                 grid = newGrid;
+                steps++;
                 const newTile = addRandomTile();
                 renderGrid();
                 if (newTile) animateTile(newTile.r, newTile.c, 'new-tile');
                 updateScore();
+                updateSteps();
                 
                 if (isGameOver()) {
                     setTimeout(showGameOver, 500);
@@ -766,7 +781,8 @@
         function saveState() {
             history.push({
                 grid: grid.map(row => [...row]),
-                score: score
+                score: score,
+                steps: steps
             });
             if (history.length > 10) history.shift();
         }
@@ -780,9 +796,31 @@
             const state = history.pop();
             grid = state.grid;
             score = state.score;
+            steps = state.steps || steps;
             renderGrid();
             updateScore();
+            updateSteps();
             showToast('已撤销', 'success');
+        }
+
+        function updateSteps() {
+            document.getElementById('steps').textContent = steps;
+        }
+
+        function updateBestRecord() {
+            if (typeof gameRecords !== 'undefined') {
+                const record = gameRecords.getRecord('2048');
+                if (record && (record.bestTime || record.bestSteps)) {
+                    let bestStr = '';
+                    if (record.bestSteps) {
+                        bestStr = `${record.bestSteps}步`;
+                    }
+                    document.getElementById('best-record').textContent = bestStr || '已记录';
+                    document.getElementById('best-record-card').style.display = 'flex';
+                } else {
+                    document.getElementById('best-record-card').style.display = 'none';
+                }
+            }
         }
 
         function updateScore() {
@@ -822,6 +860,16 @@
         function showVictory() {
             document.getElementById('victory-score').textContent = score;
             document.getElementById('victory-modal').classList.add('show');
+            
+            // 记录最佳成绩（时间和步数）
+            if (typeof gameRecords !== 'undefined') {
+                // 估算游戏时间（假设每步平均3秒）
+                const estimatedTimeMs = steps * 3000;
+                gameRecords.record('2048', {
+                    time: estimatedTimeMs,
+                    steps: steps
+                });
+            }
         }
 
         function closeModal() {

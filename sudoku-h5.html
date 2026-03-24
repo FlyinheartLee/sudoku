@@ -9,6 +9,8 @@
     <meta name="description" content="精美数独游戏 - 支持笔记、提示、多种难度">
     <title>数独 Master</title>
     
+    <script src="best-record.js"></script>
+    
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIuWvj+aWryBNYXN0ZXIiLCAic2hvcnRfbmFtZSI6ICLlr4/mlq8iLCAic3RhcnRfdXJsIjogIi4iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzYzNjZmMSIsICJ0aGVtZV9jb2xvciI6ICIjNjM2NmYxIn0=">
     
     <style>
@@ -1081,6 +1083,10 @@
         <div class="stat-card">
             <span class="stat-label">🔢</span>
             <span class="stat-value remaining" id="remaining">81</span>
+        </div>
+        <div class="stat-card" id="best-record-card" style="display: none;">
+            <span class="stat-label">🏆</span>
+            <span class="stat-value" id="best-time">--:--</span>
         </div>
     </div>
 
@@ -2281,6 +2287,7 @@
             difficulty = selectedDifficulty;
             const labels = { easy: '简单', medium: '中等', hard: '困难' };
             document.getElementById('difficulty-badge').textContent = labels[difficulty];
+            updateBestRecord();
             closeModal();
             newGame();
             showToast('🎮 新游戏开始！', 'success');
@@ -2292,6 +2299,29 @@
             const secs = (seconds % 60).toString().padStart(2, '0');
             document.getElementById('victory-time').textContent = `${mins}:${secs}`;
             document.getElementById('victory-modal').classList.add('show');
+            
+            // 记录最佳成绩
+            if (typeof gameRecords !== 'undefined') {
+                const timeMs = seconds * 1000;
+                gameRecords.record('sudoku', {
+                    time: timeMs,
+                    difficulty: difficulty
+                });
+            }
+        }
+        
+        // 更新最佳记录显示
+        function updateBestRecord() {
+            if (typeof gameRecords !== 'undefined') {
+                const record = gameRecords.getRecord(`sudoku_${difficulty}`);
+                if (record && record.bestTime) {
+                    const bestTimeStr = gameRecords.formatTime(record.bestTime);
+                    document.getElementById('best-time').textContent = bestTimeStr;
+                    document.getElementById('best-record-card').style.display = 'flex';
+                } else {
+                    document.getElementById('best-record-card').style.display = 'none';
+                }
+            }
         }
 
         function closeVictory() {
@@ -2449,6 +2479,7 @@
 
         // 启动
         init();
+        updateBestRecord();
     </script>
 </body>
 </html>
