@@ -1,0 +1,49 @@
+name: inspiration_capsule
+description: 灵感胶囊 - AI 驱动的语音笔记应用
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # 状态管理
+  flutter_riverpod: ^2.4.0
+  
+  # 本地存储
+  sqflite: ^2.3.0
+  path_provider: ^2.0.15
+  shared_preferences: ^2.2.0
+  
+  # 网络请求
+  dio: ^5.3.0
+  
+  # 语音功能后续添加
+  # record: ^4.4.4
+  # permission_handler: ^11.0.0
+  
+  # UI 组件
+  flutter_markdown: ^0.6.18
+  shimmer: ^3.0.0
+  flutter_slidable: ^3.0.0
+  
+  # 工具
+  uuid: ^4.2.0
+  intl: ^0.18.0
+  path: ^1.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/

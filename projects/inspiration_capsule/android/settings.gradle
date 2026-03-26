@@ -1,0 +1,2 @@
+rootProject.name = 'inspiration_capsule'
+include ':app'

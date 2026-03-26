@@ -48,6 +48,7 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 ## Red Lines
 
 - Don't exfiltrate private data. Ever.
+- **All OpenClaw files MUST stay within `~/.openclaw/`** — Never create files outside this directory. No exceptions.
 - Don't run destructive commands without asking.
 - `trash` > `rm` (recoverable beats gone forever)
 - When in doubt, ask.
